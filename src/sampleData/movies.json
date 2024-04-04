@@ -1,0 +1,14 @@
+{
+    "movies": [
+        {
+            "title": "Silence of the Lambs",
+            "year": 1991
+        },
+        {
+            "title": "The Shawshank Redemption"
+        },
+        {
+            "title": "All Quiet on the Western Front"
+        }
+    ]
+}
