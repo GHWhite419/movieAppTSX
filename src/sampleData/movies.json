@@ -2,13 +2,16 @@
     "movies": [
         {
             "title": "Silence of the Lambs",
-            "year": 1991
+            "year": 1991,
+            "id": "3e72eb3d-1424-4880-81f9-14b01d57f33b"
         },
         {
-            "title": "The Shawshank Redemption"
+            "title": "The Shawshank Redemption",
+            "id": "167f0a21-3748-40a4-8944-e025848c1e59"
         },
         {
-            "title": "All Quiet on the Western Front"
+            "title": "All Quiet on the Western Front",
+            "id": "ca03123c-cf50-4ce1-8419-305326f79340"
         }
     ]
 }
