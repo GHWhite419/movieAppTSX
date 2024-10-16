@@ -25,19 +25,21 @@ interface Props {
 
 export const MovieProvider: React.FC<Props> = ({ children }) => {
   const [movies, setMovies] = useState<MovieType[]>([]);
-  const createMovie = async (movie: MovieType) => {
+
+  const createMovie = async (movie: Omit<MovieType, "id">) => {
     try {
       // Add a new document with a generated id.
       const docRef = await addDoc(collection(db, "movies"), {
         title: movie.title,
       });
 
-      const newMovie: MovieType = {
-        ...movie,
-        id: docRef.id,
-      };
+      // const newMovie: MovieType = {
+      //   ...movie,
+      //   id: docRef.id,
+      // };
 
-      setMovies([...movies, newMovie]);
+      // setMovies([...movies, newMovie]);
+      getMovieList();
       console.log("Movie added with ID: ", docRef.id);
     } catch (e) {
       console.log("Error adding movie:", e);
@@ -46,23 +48,24 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
 
   const getMovieList = async () => {
     const querySnapshot = await getDocs(collection(db, "movies"));
-    const movieList: MovieType[] = [];
-    querySnapshot.forEach((doc) => {
-      // doc.data() is never undefined for query doc snapshots
+    const movieList: MovieType[] = querySnapshot.docs.map((doc) => {
       const movieData = doc.data();
-      const movie: MovieType = {
+      return {
         id: doc.id,
         title: movieData.title,
-      };
-
-      movieList.push(movie);
+      } as MovieType;
     });
     setMovies(movieList);
   };
 
   const deleteMovie = async (id: string) => {
-    await deleteDoc(doc(db, "movies", id));
-    console.log("Movie deleted");
+    try {
+      await deleteDoc(doc(db, "movies", id));
+
+      // getMovieList();
+    } catch (e) {
+      console.log("Error deleting movie:", e);
+    }
   };
 
   const updateMovie = (id: string) => {

@@ -16,8 +16,11 @@ function MovieList() {
     getMovieList();
   }, []);
 
-  const deleteButton = (movie: MovieType) => {
+  const deleteConfirm = (movie: MovieType) => {
     console.log(`You deleted ${movie.title}`);
+    deleteMovie(movie.id);
+    // getMovieList();
+    // Works well enough, but sometimes the movies stay on the list after being deleted from the DB.
   };
 
   return (
@@ -28,9 +31,9 @@ function MovieList() {
         {movies.map((movie: MovieType) => (
           <li>
             {movie.title}
-            {/* <button type="button" onClick={() => deleteMovie(movie.id)}>
+            <button type="button" onClick={() => deleteConfirm(movie)}>
               X
-            </button> */}
+            </button>
           </li>
         ))}
       </ul>
@@ -40,6 +43,7 @@ function MovieList() {
         onSubmit={(e) => {
           e.preventDefault();
           createMovie({
+            id: "placeholder",
             title: movieTitle,
           });
           console.log("Movie added: ", movieTitle);
