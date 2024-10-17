@@ -1,24 +1,47 @@
-import { useState, useContext } from "react";
+import { useContext, useState } from "react";
 import { AuthContext } from "../firebase/AuthContext";
 import { Link } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+
+const loginSchema = yup.object().shape({
+  email: yup
+    .string()
+    .email("Invalid email format")
+    .required("Email is required"),
+  password: yup
+    .string()
+    .required("Password is required")
+    .min(6, "Password must be at least 6 characters"),
+});
 
 function Login() {
   const { login } = useContext(AuthContext);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
-  const [loginEmail, setLoginEmail] = useState<string>("");
-  const [loginPassword, setLoginPassword] = useState<string>("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(loginSchema),
+    mode: "onBlur",
+    reValidateMode: "onSubmit",
+  });
 
-  // I don't know if I'll need this or not, or whether it's a best practice to include.
-
-  // interface LoginForm {
-  //   email: string;
-  //   password: string;
-  // }
-
-  // const defaultValues: LoginForm = {
-  //   email: "",
-  //   password: "",
-  // };
+  const onSubmit = async (data: { email: string; password: string }) => {
+    try {
+      await login(data.email, data.password);
+      setLoginError(null);
+    } catch (error) {
+      if (error instanceof Error) {
+        setLoginError((error as Error).message);
+      } else {
+        setLoginError("An unexpected error occured.");
+      }
+    }
+  };
 
   return (
     <>
@@ -26,33 +49,20 @@ function Login() {
       {/* Consider changing this h1 later on; may have a h1 displaying title in a parent component. */}
       <form
         action="submit"
-        onSubmit={(e) => {
-          e.preventDefault();
-          login(loginEmail, loginPassword);
-          setLoginPassword("");
-        }}
+        onSubmit={handleSubmit(onSubmit)}
         // Consider refactoring some of the code here. Should the submit function have its own codeblock and be referred to here and in the button, or is it fine as is? Do I need to add accessibility titles to the form itself?
+        noValidate
       >
-        <label htmlFor="loginEmail">Email</label>
-        <input
-          name="loginEmail"
-          id="loginEmail"
-          type="email"
-          value={loginEmail}
-          onChange={(e) => {
-            setLoginEmail(e.target.value);
-          }}
-        />
+        <label htmlFor="email">Email</label>
+        <input id="email" type="email" {...register("email")} />
+        {errors.email && <p>{errors.email.message}</p>}
+
         <label htmlFor="password">Password</label>
-        <input
-          name="password"
-          id="password"
-          type="password"
-          value={loginPassword}
-          onChange={(e) => {
-            setLoginPassword(e.target.value);
-          }}
-        />
+        <input id="password" type="password" {...register("password")} />
+        {errors.password && <p>{errors.password.message}</p>}
+
+        {loginError && <p>{loginError}</p>}
+
         <button type="submit">Log in</button>
         {/* May need to refactor button for accessibility */}
       </form>

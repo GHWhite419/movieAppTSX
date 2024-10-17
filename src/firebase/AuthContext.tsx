@@ -66,8 +66,19 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
     } catch (error) {
       const errorCode = (error as { code?: string }).code;
+
       const errorMessage = (error as { message?: string }).message;
       console.error("Login failed:", { errorCode, errorMessage });
+
+      if (errorCode === "auth/invalid-credential") {
+        throw new Error("Incorrect email or password");
+      } else if (errorCode === "auth/too-many-requests") {
+        throw new Error(
+          "Too many failed login attempts. Please try again later or reset your password."
+        );
+      } else {
+        throw new Error("An unexpected error occured. Please try again later.");
+      }
     }
   };
 
