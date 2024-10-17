@@ -4,7 +4,7 @@ import { AuthContext } from "../firebase/AuthContext";
 import { MovieContext, MovieContextType } from "../context/MovieContext";
 
 function MovieList() {
-  const { logout } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const { movies, createMovie, getMovieList, deleteMovie } = useContext(
     MovieContext
   ) as MovieContextType;
@@ -19,17 +19,31 @@ function MovieList() {
   const deleteConfirm = (movie: MovieType) => {
     console.log(`You deleted ${movie.title}`);
     deleteMovie(movie.id);
-    // getMovieList();
-    // Works well enough, but sometimes the movies stay on the list after being deleted from the DB.
   };
+
+  let displayName: string | null;
+  if (user) {
+    displayName = user.email;
+  } else {
+    displayName = "User";
+  }
 
   return (
     <>
-      <h1>Hello Galen{/* This will be replaced by the user's name */}</h1>
+    {/* We'll eventually want to display the following in this component:
+    -Search bar
+    -View groups
+    -Form a group
+    -Group invites??
+    -Menu to alter user settings
+     */}
+      <h1>
+        Hello {displayName}
+      </h1>
       <h2>Your list:</h2>
       <ul>
         {movies.map((movie: MovieType) => (
-          <li>
+          <li key={movie.id}>
             {movie.title}
             <button type="button" onClick={() => deleteConfirm(movie)}>
               X
@@ -45,6 +59,7 @@ function MovieList() {
           createMovie({
             id: "placeholder",
             title: movieTitle,
+            dateAdded: new Date(),
           });
           console.log("Movie added: ", movieTitle);
           setMovieTitle("");

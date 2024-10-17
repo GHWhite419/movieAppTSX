@@ -1,12 +1,12 @@
 import { useState, useContext } from "react";
 import { AuthContext } from "../firebase/AuthContext";
+import { Link } from "react-router-dom";
 
 function Login() {
-  // const auth = useContext(AuthContext);
   const { login } = useContext(AuthContext);
 
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
+  const [loginEmail, setLoginEmail] = useState<string>("");
+  const [loginPassword, setLoginPassword] = useState<string>("");
 
   // I don't know if I'll need this or not, or whether it's a best practice to include.
 
@@ -28,18 +28,19 @@ function Login() {
         action="submit"
         onSubmit={(e) => {
           e.preventDefault();
-          login(email, password);
+          login(loginEmail, loginPassword);
+          setLoginPassword("");
         }}
         // Consider refactoring some of the code here. Should the submit function have its own codeblock and be referred to here and in the button, or is it fine as is? Do I need to add accessibility titles to the form itself?
       >
-        <label htmlFor="email">Email</label>
+        <label htmlFor="loginEmail">Email</label>
         <input
-          name="email"
-          id="email"
+          name="loginEmail"
+          id="loginEmail"
           type="email"
-          value={email}
+          value={loginEmail}
           onChange={(e) => {
-            setEmail(e.target.value);
+            setLoginEmail(e.target.value);
           }}
         />
         <label htmlFor="password">Password</label>
@@ -47,16 +48,15 @@ function Login() {
           name="password"
           id="password"
           type="password"
-          value={password}
+          value={loginPassword}
           onChange={(e) => {
-            setPassword(e.target.value);
+            setLoginPassword(e.target.value);
           }}
         />
         <button type="submit">Log in</button>
         {/* May need to refactor button for accessibility */}
-        <a href="">Don't have an account? Sign up here!</a>
-        {/* This anchor tag will later route to a sign up page. */}
       </form>
+      <Link to="signup">Don't have an account? Sign up here!</Link>
     </>
   );
 }

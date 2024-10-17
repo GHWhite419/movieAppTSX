@@ -2,14 +2,14 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 import { AuthProvider } from "./firebase/AuthContext.tsx";
-import { MovieProvider } from "./context/MovieContext.tsx";
+import { BrowserRouter } from "react-router-dom";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider>
-      <MovieProvider>
+      <BrowserRouter>
         <App />
-      </MovieProvider>
+      </BrowserRouter>
     </AuthProvider>
   </React.StrictMode>
 );

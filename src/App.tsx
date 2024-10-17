@@ -1,10 +1,11 @@
 import "./App.css";
 import Login from "./components/Login.tsx";
+import SignUp from "./components/SignUp.tsx";
 import MovieList from "./components/MovieList";
 import { useContext } from "react";
-// import { onAuthStateChanged } from "firebase/auth";
-// import { auth } from "./firebase/Firebase.ts";
 import { AuthContext } from "./firebase/AuthContext.tsx";
+import { MovieProvider } from "./context/MovieContext.tsx";
+import { Routes, Route } from "react-router-dom";
 
 // I'll start by creating and importing the most basic components.
 // 1. A login component. Once a user signs in, they will be directed to their unique page.
@@ -19,8 +20,20 @@ function App() {
 
   return (
     <>
-      {/* // I'm thinking I can use a ternary to conditionally render the Login component depending on whether a user is logged in. I probably will also use Links/Router DOM for this */}
-      {user ? <MovieList /> : <Login />}
+      {/* <header></header> */}
+      {/* <body> */}
+        {user ? (
+          <MovieProvider>
+            <MovieList />
+          </MovieProvider>
+        ) : (
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="signup" element={<SignUp />} />
+          </Routes>
+        )}
+      {/* </body> */}
+      {/* <footer></footer> */}
     </>
   );
 }

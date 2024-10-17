@@ -1,16 +1,19 @@
 import React, { useEffect, useState, createContext } from "react";
-import { auth } from "./Firebase";
+import { auth, db } from "./Firebase";
 import {
   User,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  createUserWithEmailAndPassword,
 } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>(
@@ -25,49 +28,86 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const checkUser = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
         console.log("User is signed in");
-        console.log(firebaseUser.uid);
+        console.log(firebaseUser);
       } else {
         setUser(null);
         console.log("User is signed out");
       }
     });
-    return unsubscribe;
+    return checkUser;
   }, []);
 
-  const login = async (email: string, password: string) => {
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Signed in
-        const user = userCredential.user;
-        console.log(user);
-        // ...
-      })
-      .catch((error) => {
-        // const errorCode = error.code;
-        // const errorMessage = error.message;
-        console.log("User not signed in");
-        console.log(error);
-      });
+  const login = async (email: string, password: string): Promise<void> => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      // Signed in
+      const user = userCredential.user;
+      console.log(user);
+
+      const userRef = doc(db, `users/${user.uid}`);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          email: user.email,
+          createdAt: new Date(),
+        });
+        console.log("User profile created in Firestore");
+      } else {
+        console.log("User already exists in Firestore");
+      }
+    } catch (error) {
+      const errorCode = (error as { code?: string }).code;
+      const errorMessage = (error as { message?: string }).message;
+      console.error("Login failed:", { errorCode, errorMessage });
+    }
   };
 
-  const logout = () => {
+  const logout = async (): Promise<void> => {
     signOut(auth)
       .then(() => {
         // Sign-out successful.
         console.log("User signed out successfully");
       })
       .catch((error) => {
-        // An error happened.
-        console.log(error);
+        const errorCode = (error as { code?: string }).code;
+        const errorMessage = (error as { message?: string }).message;
+        console.error("Logout failed:", { errorCode, errorMessage });
       });
   };
 
+  const signup = async (email: string, password: string): Promise<void> => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      // Signed up
+      const user = userCredential.user;
+
+      const userRef = doc(db, `users/${user.uid}`);
+      await setDoc(userRef, {
+        email: user.email,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      const errorCode = (error as { code?: string }).code;
+      const errorMessage = (error as { message?: string }).message;
+      console.error("Signup failed:", { errorCode, errorMessage });
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, signup }}>
       {children}
     </AuthContext.Provider>
   );
