@@ -6,6 +6,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
@@ -14,6 +15,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
+  resetPass: (email: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>(
@@ -66,12 +68,11 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       }
     } catch (error) {
       const errorCode = (error as { code?: string }).code;
-
       const errorMessage = (error as { message?: string }).message;
       console.error("Login failed:", { errorCode, errorMessage });
 
       if (errorCode === "auth/invalid-credential") {
-        throw new Error("Incorrect email or password");
+        throw new Error("Incorrect email or password.");
       } else if (errorCode === "auth/too-many-requests") {
         throw new Error(
           "Too many failed login attempts. Please try again later or reset your password."
@@ -92,6 +93,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
         const errorCode = (error as { code?: string }).code;
         const errorMessage = (error as { message?: string }).message;
         console.error("Logout failed:", { errorCode, errorMessage });
+        throw new Error("Error logging out. An unexpected error occured.");
       });
   };
 
@@ -114,11 +116,35 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       const errorCode = (error as { code?: string }).code;
       const errorMessage = (error as { message?: string }).message;
       console.error("Signup failed:", { errorCode, errorMessage });
+
+      if (errorCode === "auth/email-already-in-use") {
+        throw new Error("Whoops! That email is already registered!");
+      } else {
+        throw new Error("An unexpected error occured. Please try again later.");
+      }
+    }
+  };
+
+  const resetPass = async (email: string): Promise<void> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      const errorCode = (error as { code?: string }).code;
+      const errorMessage = (error as { message?: string }).message;
+      console.error("Error sending password reset email:", {
+        errorCode,
+        errorMessage,
+      });
+      if (errorCode === "auth/invalid-email") {
+        throw new Error("Invalid email format.");
+      } else {
+        throw new Error("An unexpected error occured. Please try again later.");
+      }
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, signup }}>
+    <AuthContext.Provider value={{ user, login, logout, signup, resetPass }}>
       {children}
     </AuthContext.Provider>
   );

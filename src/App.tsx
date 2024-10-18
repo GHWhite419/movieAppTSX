@@ -1,7 +1,8 @@
 import "./App.css";
-import Login from "./components/Login.tsx";
-import SignUp from "./components/SignUp.tsx";
+import Login from "./components/Login";
+import SignUp from "./components/SignUp";
 import MovieList from "./components/MovieList";
+import PasswordReset from "./components/PasswordReset";
 import { useContext } from "react";
 import { AuthContext } from "./firebase/AuthContext.tsx";
 import { MovieProvider } from "./context/MovieContext.tsx";
@@ -22,16 +23,17 @@ function App() {
     <>
       {/* <header></header> */}
       {/* <body> */}
-        {user ? (
-          <MovieProvider>
-            <MovieList />
-          </MovieProvider>
-        ) : (
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="signup" element={<SignUp />} />
-          </Routes>
-        )}
+      {user ? (
+        <MovieProvider>
+          <MovieList />
+        </MovieProvider>
+      ) : (
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="signup" element={<SignUp />} />
+          <Route path="passreset" element={<PasswordReset />} />
+        </Routes>
+      )}
       {/* </body> */}
       {/* <footer></footer> */}
     </>

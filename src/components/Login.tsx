@@ -8,12 +8,12 @@ import * as yup from "yup";
 const loginSchema = yup.object().shape({
   email: yup
     .string()
-    .email("Invalid email format")
-    .required("Email is required"),
+    .email("Invalid email format.")
+    .required("Email is required."),
   password: yup
     .string()
-    .required("Password is required")
-    .min(6, "Password must be at least 6 characters"),
+    .required("Password is required.")
+    .min(6, "Password must be at least 6 characters."),
 });
 
 function Login() {
@@ -37,8 +37,6 @@ function Login() {
     } catch (error) {
       if (error instanceof Error) {
         setLoginError((error as Error).message);
-      } else {
-        setLoginError("An unexpected error occured.");
       }
     }
   };
@@ -47,12 +45,7 @@ function Login() {
     <>
       <h1>Welcome! Please sign in if you have an account</h1>
       {/* Consider changing this h1 later on; may have a h1 displaying title in a parent component. */}
-      <form
-        action="submit"
-        onSubmit={handleSubmit(onSubmit)}
-        // Consider refactoring some of the code here. Should the submit function have its own codeblock and be referred to here and in the button, or is it fine as is? Do I need to add accessibility titles to the form itself?
-        noValidate
-      >
+      <form action="submit" onSubmit={handleSubmit(onSubmit)} noValidate>
         <label htmlFor="email">Email</label>
         <input id="email" type="email" {...register("email")} />
         {errors.email && <p>{errors.email.message}</p>}
@@ -67,6 +60,8 @@ function Login() {
         {/* May need to refactor button for accessibility */}
       </form>
       <Link to="signup">Don't have an account? Sign up here!</Link>
+      <Link to="passreset">Forgot your password?</Link>
+      {/* Add new password reset component */}
     </>
   );
 }
