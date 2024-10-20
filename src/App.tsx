@@ -3,6 +3,7 @@ import Login from "./components/Login";
 import SignUp from "./components/SignUp";
 import MovieList from "./components/MovieList";
 import PasswordReset from "./components/PasswordReset";
+import MovieInfo from "./components/MovieInfo.tsx";
 import { useContext } from "react";
 import { AuthContext } from "./firebase/AuthContext.tsx";
 import { MovieProvider } from "./context/MovieContext.tsx";
@@ -25,7 +26,11 @@ function App() {
       {/* <body> */}
       {user ? (
         <MovieProvider>
-          <MovieList />
+          {/* <MovieList /> */}
+          <Routes>
+            <Route path="/" element={<MovieList />} />
+            <Route path="/movies/:movieId" element={<MovieInfo />} />
+          </Routes>
         </MovieProvider>
       ) : (
         <Routes>

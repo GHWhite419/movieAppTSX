@@ -2,10 +2,11 @@ import MovieType from "../types/MovieType";
 import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../firebase/AuthContext";
 import { MovieContext, MovieContextType } from "../context/MovieContext";
+import { Link } from "react-router-dom";
 
 function MovieList() {
   const { user, logout } = useContext(AuthContext);
-  const { movies, createMovie, getMovieList, deleteMovie } = useContext(
+  const { movies, createMovie, getMovieList } = useContext(
     MovieContext
   ) as MovieContextType;
   // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
@@ -16,11 +17,6 @@ function MovieList() {
   useEffect(() => {
     getMovieList();
   }, []);
-
-  const deleteConfirm = (movie: MovieType) => {
-    console.log(`You deleted ${movie.title}`);
-    deleteMovie(movie.id);
-  };
 
   let displayName: string | null;
   if (user) {
@@ -35,7 +31,9 @@ function MovieList() {
       await logout();
       setLogoutError(null);
     } catch (error) {
-      setLogoutError("Something went wrong while signing out. Please try again.");
+      setLogoutError(
+        "Something went wrong while signing out. Please try again."
+      );
     }
   };
 
@@ -53,10 +51,10 @@ function MovieList() {
       <ul>
         {movies.map((movie: MovieType) => (
           <li key={movie.id}>
-            {movie.title}
-            <button type="button" onClick={() => deleteConfirm(movie)}>
+            <Link to={`/movies/${movie.id}`}>{movie.title}</Link>
+            {/* <button type="button" onClick={() => deleteConfirm(movie)}>
               X
-            </button>
+            </button> */}
           </li>
         ))}
       </ul>
