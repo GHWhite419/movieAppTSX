@@ -35,7 +35,6 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
 
   if (user) {
     userMovies = `users/${user.uid}/movies`;
-    // userMovies = 'movies'
   } else {
     userMovies = "movies";
   }
@@ -87,19 +86,30 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
             ? movieData.dateAdded.toDate()
             : new Date(movieData.dateAdded),
       };
-      // await getDoc(doc(db, userMovies, id))
     } catch (error) {
       console.log("No such document");
-      return null;
+      throw new Error();
     }
   };
 
   const deleteMovie = async (id: string) => {
     try {
-      await deleteDoc(doc(db, userMovies, id));
+      const movieRef = doc(db, userMovies, id);
+      const docSnapshot = await getDoc(movieRef);
+
+      if (!docSnapshot.exists()) {
+        throw new Error("Movie not found.");
+      }
+
+      await deleteDoc(movieRef);
       getMovieList();
-    } catch (e) {
-      console.log("Error deleting movie:", e);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error.message === "Movie not found.") {
+          throw error;
+        }
+        throw new Error("Unexpected error deleting movie.");
+      }
     }
   };
 

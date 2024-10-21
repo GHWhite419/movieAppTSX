@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
 import { MovieContext, MovieContextType } from "../context/MovieContext";
 import MovieType from "../types/MovieType";
-// import { Timestamp } from "firebase/firestore";
+import ConfirmDelete from "./ConfirmDelete";
 
 function MovieInfo() {
   const { movieId } = useParams<{ movieId: string }>();
@@ -11,11 +11,12 @@ function MovieInfo() {
   ) as MovieContextType;
   //   Again, eventually move to a null guard instead of a type assertion here.
   const [movie, setMovie] = useState<MovieType | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [status, setStatus] = useState<string>("loading");
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [isMovieDeleted, setIsMovieDeleted] = useState<boolean>(false);
 
-  const deleteConfirm = (movie: MovieType) => {
-    console.log(`You deleted ${movie.title}`);
-    deleteMovie(movie.id);
+  const toggleDeleteModal = () => {
+    setShowModal(!showModal);
   };
 
   useEffect(() => {
@@ -24,19 +25,55 @@ function MovieInfo() {
         try {
           const fetchedMovie = await getMovie(movieId);
           setMovie(fetchedMovie);
+          setStatus("");
         } catch (error) {
           console.error("Error fetching movie:", error);
-        } finally {
-          setLoading(false);
+          setStatus("redirecting");
         }
       }
     };
     fetchMovie();
   }, [movieId, getMovie]);
 
-  if (loading) return <p>Loading...</p>;
+  useEffect(() => {
+    if (status === "redirecting") {
+      const timer = setTimeout(() => {
+        window.location.href = "/";
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else if (status === "deleteError") {
+      const timer = setTimeout(() => {
+        setStatus("");
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
 
-  if (!movie) return <p>Movie not found</p>;
+  const handleDelete = async () => {
+    try {
+      if (movie) {
+        await deleteMovie(movie.id);
+        setMovie(null);
+        setIsMovieDeleted(true);
+        setStatus("redirecting");
+      }
+    } catch (error) {
+      console.error("Error deleting movie:", error);
+      setStatus("deleteError");
+    } finally {
+      setShowModal(false);
+    }
+  };
+
+  if (status === "loading") return <p>Loading...</p>;
+
+  if (!movie) {
+    if (isMovieDeleted === true)
+      return <p>Movie deleted. Redirecting to your list...</p>;
+    else {
+      return <p>Movie not found. Redirecting to your list...</p>;
+    }
+  }
 
   return (
     <>
@@ -58,12 +95,27 @@ function MovieInfo() {
       <p>Directed by: {movie.director}</p>
       <p>Starring: {movie.starring}</p>
       <p>Description: {movie.description}</p>
-
       <Link to="/">Back</Link>
-      <button type="button" onClick={() => updateMovie(movie)}>Edit</button>
-      <button type="button" onClick={() => deleteConfirm(movie)}>
-        X
+      <button type="button" onClick={() => updateMovie(movie)}>
+        Edit
       </button>
+      <button type="button" onClick={() => toggleDeleteModal()}>
+        Delete
+      </button>
+      <p
+        style={
+          status === "deleteError" ? { display: "flex" } : { display: "none" }
+        }
+      >
+        Error deleting movie. Please try again later.
+      </p>
+      <ConfirmDelete
+        movieTitle={movie.title}
+        movieId={movie.id}
+        open={showModal}
+        onClose={toggleDeleteModal}
+        onConfirm={handleDelete}
+      />
     </>
   );
 }
