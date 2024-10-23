@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
 import { MovieContext, MovieContextType } from "../context/MovieContext";
 import MovieType from "../types/MovieType";
@@ -14,6 +14,8 @@ function MovieInfo() {
   const [status, setStatus] = useState<string>("loading");
   const [showModal, setShowModal] = useState<boolean>(false);
   const [isMovieDeleted, setIsMovieDeleted] = useState<boolean>(false);
+
+  const navigate = useNavigate();
 
   const toggleDeleteModal = () => {
     setShowModal(!showModal);
@@ -38,8 +40,8 @@ function MovieInfo() {
   useEffect(() => {
     if (status === "redirecting") {
       const timer = setTimeout(() => {
-        window.location.href = "/";
-      }, 3000);
+        navigate(-1);
+      }, 2000);
       return () => clearTimeout(timer);
     } else if (status === "deleteError") {
       const timer = setTimeout(() => {
@@ -89,8 +91,17 @@ function MovieInfo() {
           hour12: true,
         })}
       </p>
-      <p>Release year: {movie.year}</p>
-      <p>Runtime: {movie.runtime}</p>
+      <p>Release year: {movie.year || ""}</p>
+      <p>
+        Runtime:{" "}
+        {movie.runtime &&
+        (movie.runtime[0] !== null || movie.runtime[1] !== null)
+          ? `${movie.runtime[0] || 0}:${String(movie.runtime[1] || 0).padStart(
+              2,
+              "0"
+            )}`
+          : ""}
+      </p>
       <p>Genre: {movie.genre}</p>
       <p>Directed by: {movie.director}</p>
       <p>Starring: {movie.starring}</p>

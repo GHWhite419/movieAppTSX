@@ -6,11 +6,9 @@ import { Link } from "react-router-dom";
 
 function MovieList() {
   const { user, logout } = useContext(AuthContext);
-  const { movies, createMovie, getMovieList } = useContext(
-    MovieContext
-  ) as MovieContextType;
+  const { movies, getMovieList } = useContext(MovieContext) as MovieContextType;
   // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
-  const [movieTitle, setMovieTitle] = useState<string>("");
+  // const [movieTitle, setMovieTitle] = useState<string>("");
   // This add-a-movie form will eventually need to be moved into a createMovie component, and will likely need a useReducer hook. Will need to figure out how to do that.
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
@@ -52,38 +50,11 @@ function MovieList() {
         {movies.map((movie: MovieType) => (
           <li key={movie.id}>
             <Link to={`/movies/${movie.id}`}>{movie.title}</Link>
-            {/* <button type="button" onClick={() => deleteConfirm(movie)}>
-              X
-            </button> */}
           </li>
         ))}
       </ul>
 
-      <form
-        action="submit"
-        onSubmit={(e) => {
-          e.preventDefault();
-          createMovie({
-            id: "placeholder",
-            title: movieTitle,
-            dateAdded: new Date(),
-          });
-          console.log("Movie added: ", movieTitle);
-          setMovieTitle("");
-        }}
-      >
-        <label htmlFor="movieTitle"></label>
-        <input
-          type="text"
-          name="movieTitle"
-          id="movieTitle"
-          value={movieTitle}
-          onChange={(e) => {
-            setMovieTitle(e.target.value);
-          }}
-        />
-        <button type="submit">Add movie</button>
-      </form>
+      <Link to="custommovie">Add a movie</Link>
 
       <button
         type="button"

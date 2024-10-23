@@ -17,7 +17,7 @@ export interface MovieContextType {
   createMovie: (movie: MovieType) => Promise<void>;
   getMovieList: () => Promise<void>;
   getMovie: (id: string) => Promise<MovieType | null>;
-  deleteMovie: (id: string) => void;
+  deleteMovie: (id: string) => Promise<void>;
   updateMovie: (movie: MovieType) => void;
 }
 
@@ -39,23 +39,34 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
     userMovies = "movies";
   }
 
-  const createMovie = async (movie: MovieType) => {
+  const createMovie = async (movie: MovieType): Promise<void> => {
     try {
       // Add a new document with a generated id.
-
       const docRef = await addDoc(collection(db, userMovies), {
         title: movie.title,
         dateAdded: new Date(),
+        year: movie.year || null,
+        runtime: movie.runtime
+          ? [
+              movie.runtime[0] !== undefined ? movie.runtime[0] : null,
+              movie.runtime[1] !== undefined ? movie.runtime[1] : null,
+            ]
+          : [null, null],
+        genre: movie.genre || "",
+        description: movie.description || "",
+        director: movie.director || "",
+        starring: movie.starring || "",
       });
-
-      getMovieList();
       console.log("Movie added with ID: ", docRef.id);
-    } catch (e) {
-      console.log("Error adding movie:", e);
+    } catch (error) {
+      console.log("Error adding movie:", error);
+      throw new Error(
+        "Unexpected error creating movie. Please try again later."
+      );
     }
   };
 
-  const getMovieList = async () => {
+  const getMovieList = async (): Promise<void> => {
     const querySnapshot = await getDocs(collection(db, userMovies));
     const movieList: MovieType[] = querySnapshot.docs.map((doc) => {
       const movieData = doc.data();
@@ -70,6 +81,7 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
     });
     setMovies(movieList);
   };
+  // This needs some error handling
 
   const getMovie = async (id: string): Promise<MovieType | null> => {
     const docRef = doc(db, userMovies, id);
@@ -85,6 +97,12 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
           movieData.dateAdded instanceof Timestamp
             ? movieData.dateAdded.toDate()
             : new Date(movieData.dateAdded),
+        year: movieData.year,
+        runtime: movieData.runtime,
+        genre: movieData.genre,
+        director: movieData.director,
+        starring: movieData.starring,
+        description: movieData.description,
       };
     } catch (error) {
       console.log("No such document");
@@ -92,7 +110,7 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
     }
   };
 
-  const deleteMovie = async (id: string) => {
+  const deleteMovie = async (id: string): Promise<void> => {
     try {
       const movieRef = doc(db, userMovies, id);
       const docSnapshot = await getDoc(movieRef);
@@ -108,12 +126,14 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
         if (error.message === "Movie not found.") {
           throw error;
         }
-        throw new Error("Unexpected error deleting movie.");
+        throw new Error(
+          "Unexpected error deleting movie. Please try again later."
+        );
       }
     }
   };
 
-  const updateMovie = (movie: MovieType) => {
+  const updateMovie = (movie: MovieType): void => {
     console.log("Movie updated: ", movie.title);
   };
 
