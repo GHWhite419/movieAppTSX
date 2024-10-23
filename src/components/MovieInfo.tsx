@@ -6,7 +6,7 @@ import ConfirmDelete from "./ConfirmDelete";
 
 function MovieInfo() {
   const { movieId } = useParams<{ movieId: string }>();
-  const { getMovie, deleteMovie, updateMovie } = useContext(
+  const { getMovie, deleteMovie } = useContext(
     MovieContext
   ) as MovieContextType;
   //   Again, eventually move to a null guard instead of a type assertion here.
@@ -73,7 +73,7 @@ function MovieInfo() {
     if (isMovieDeleted === true)
       return <p>Movie deleted. Redirecting to your list...</p>;
     else {
-      return <p>Movie not found. Redirecting to your list...</p>;
+      return <p>Movie not found, please try again later. Redirecting to your list...</p>;
     }
   }
 
@@ -107,9 +107,7 @@ function MovieInfo() {
       <p>Starring: {movie.starring}</p>
       <p>Description: {movie.description}</p>
       <Link to="/">Back</Link>
-      <button type="button" onClick={() => updateMovie(movie)}>
-        Edit
-      </button>
+      <Link to="editmovie">Edit</Link>
       <button type="button" onClick={() => toggleDeleteModal()}>
         Delete
       </button>

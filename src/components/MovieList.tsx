@@ -54,7 +54,7 @@ function MovieList() {
         ))}
       </ul>
 
-      <Link to="custommovie">Add a movie</Link>
+      <Link to="addmovie">Add a movie</Link>
 
       <button
         type="button"

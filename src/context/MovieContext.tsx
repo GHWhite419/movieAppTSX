@@ -9,6 +9,7 @@ import {
   doc,
   deleteDoc,
   Timestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { AuthContext } from "../firebase/AuthContext";
 
@@ -42,7 +43,8 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
   const createMovie = async (movie: MovieType): Promise<void> => {
     try {
       // Add a new document with a generated id.
-      const docRef = await addDoc(collection(db, userMovies), {
+      const docRef = await addDoc(collection(db, userMovies), 
+      {
         title: movie.title,
         dateAdded: new Date(),
         year: movie.year || null,
@@ -88,7 +90,7 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
     try {
       const docSnap = await getDoc(docRef);
       const movieData = docSnap.data() as MovieType;
-      console.log("Document data:,", docSnap.data());
+      // console.log("Document data:,", docSnap.data());
       // Type assertion here - change later.
       return {
         id: docSnap.id,
@@ -122,6 +124,7 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
       await deleteDoc(movieRef);
       getMovieList();
     } catch (error: unknown) {
+      // Error: unknown? Should I change this?
       if (error instanceof Error) {
         if (error.message === "Movie not found.") {
           throw error;
@@ -133,8 +136,30 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
     }
   };
 
-  const updateMovie = (movie: MovieType): void => {
-    console.log("Movie updated: ", movie.title);
+  const updateMovie = async (movie: MovieType): Promise<void> => {
+    const docRef = doc(db, userMovies, movie.id);
+    try {
+      await updateDoc(docRef, {
+        title: movie.title,
+        year: movie.year || null,
+        runtime: movie.runtime
+          ? [
+              movie.runtime[0] !== undefined ? movie.runtime[0] : null,
+              movie.runtime[1] !== undefined ? movie.runtime[1] : null,
+            ]
+          : [null, null],
+        genre: movie.genre || "",
+        description: movie.description || "",
+        director: movie.director || "",
+        starring: movie.starring || "",
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error("Unexpected error updating movie. Please try again later.");
+      }
+    }
+
+    console.log("Movie updated: ", movie.title, movie.id);
   };
 
   return (

@@ -4,7 +4,7 @@ import SignUp from "./components/SignUp";
 import MovieList from "./components/MovieList";
 import PasswordReset from "./components/PasswordReset";
 import MovieInfo from "./components/MovieInfo.tsx";
-import CreateMovie from "./components/CreateMovieForm.tsx";
+import MovieForm from "./components/MovieForm.tsx";
 import { useContext } from "react";
 import { AuthContext } from "./firebase/AuthContext.tsx";
 import { MovieProvider } from "./context/MovieContext.tsx";
@@ -31,7 +31,8 @@ function App() {
           <Routes>
             <Route path="/" element={<MovieList />} />
             <Route path="/movies/:movieId" element={<MovieInfo />} />
-            <Route path="custommovie" element={<CreateMovie />} />
+            <Route path="addmovie" element={<MovieForm />} />
+            <Route path="/movies/:movieId/editmovie" element={<MovieForm />} />
           </Routes>
         </MovieProvider>
       ) : (
