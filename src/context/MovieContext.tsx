@@ -15,6 +15,7 @@ import { AuthContext } from "../firebase/AuthContext";
 
 export interface MovieContextType {
   movies: MovieType[];
+  // Should rename this or something - identical to useState declaration
   createMovie: (movie: MovieType) => Promise<void>;
   getMovieList: () => Promise<void>;
   getMovie: (id: string) => Promise<MovieType | null>;
@@ -24,27 +25,20 @@ export interface MovieContextType {
 
 export const MovieContext = createContext<MovieContextType | null>(null);
 
-interface Props {
-  children: React.ReactNode;
-}
-
-export const MovieProvider: React.FC<Props> = ({ children }) => {
+export const MovieProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [movies, setMovies] = useState<MovieType[]>([]);
+  // If I don't rename "movies" in MovieContextType, should rename the state here (and possibly in getMovieList)
   const { user } = useContext(AuthContext);
-  let userMovies: string = "movies";
-  // Could maybe remove this variable
-
-  if (user) {
-    userMovies = `users/${user.uid}/movies`;
-  } else {
-    userMovies = "movies";
-  }
+  // const userMovies = user ? `users/${user.uid}/movies` : "";
+  const userMovies = `users/${user?.uid}/movies`;
+  // Test to see if this variable works - may as well reduce code.
 
   const createMovie = async (movie: MovieType): Promise<void> => {
     try {
       // Add a new document with a generated id.
-      const docRef = await addDoc(collection(db, userMovies), 
-      {
+      const docRef = await addDoc(collection(db, userMovies), {
         title: movie.title,
         dateAdded: new Date(),
         year: movie.year || null,
@@ -80,6 +74,7 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
             ? movieData.dateAdded.toDate()
             : movieData.dateAdded,
       } as MovieType;
+      // Type assertion here to get rid of.
     });
     setMovies(movieList);
   };
@@ -109,6 +104,7 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
     } catch (error) {
       console.log("No such document");
       throw new Error();
+      // Provide more details? Compare with MovieInfo and MovieForm error messages.
     }
   };
 
@@ -122,7 +118,6 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
       }
 
       await deleteDoc(movieRef);
-      getMovieList();
     } catch (error: unknown) {
       // Error: unknown? Should I change this?
       if (error instanceof Error) {
@@ -155,7 +150,9 @@ export const MovieProvider: React.FC<Props> = ({ children }) => {
       });
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error("Unexpected error updating movie. Please try again later.");
+        throw new Error(
+          "Unexpected error updating movie. Please try again later."
+        );
       }
     }
 

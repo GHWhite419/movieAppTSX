@@ -22,11 +22,9 @@ export const AuthContext = createContext<AuthContextType>(
   {} as AuthContextType
 );
 
-interface Props {
-  children: React.ReactNode;
-}
-
-export const AuthProvider: React.FC<Props> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -34,7 +32,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
       if (firebaseUser) {
         setUser(firebaseUser);
         console.log("User is signed in");
-        console.log(firebaseUser);
+        // console.log(firebaseUser);
       } else {
         setUser(null);
         console.log("User is signed out");

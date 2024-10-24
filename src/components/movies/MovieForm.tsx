@@ -1,6 +1,6 @@
 import { useContext, useState, useEffect } from "react";
-import { MovieContext, MovieContextType } from "../context/MovieContext";
-import MovieType from "../types/MovieType";
+import { MovieContext, MovieContextType } from "../../context/MovieContext";
+import MovieType from "../../types/MovieType";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";

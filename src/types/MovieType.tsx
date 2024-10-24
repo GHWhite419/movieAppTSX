@@ -4,13 +4,11 @@ interface MovieType {
   dateAdded: Date;
   year?: number;
   runtime?: [number?, number?];
-  // runtime?: string;
-  // runtime?: number;
-  // Is it better to have year and runtime as strings or numbers? Runtime would need to follow a specific format.
+  // image?: string;
+  // Eventually image will refer to a url string and be displayed along the movie's info.
   genre?: string;
   description?: string;
   director?: string;
-  // starring?: string[];
   starring?: string;
 }
 

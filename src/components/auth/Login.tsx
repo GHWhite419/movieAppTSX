@@ -1,5 +1,5 @@
 import { useContext, useState } from "react";
-import { AuthContext } from "../firebase/AuthContext";
+import { AuthContext } from "../../firebase/AuthContext";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";

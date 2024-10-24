@@ -6,6 +6,8 @@ interface ModalProps {
   movieId: string;
 }
 
+// -Consider whether or not to re-use this component for deleting a group as well. Otherwise rename component to distinguish from DeleteGroup (or whatever I call it)
+
 function ConfirmDelete(props: ModalProps) {
   return (
     <>

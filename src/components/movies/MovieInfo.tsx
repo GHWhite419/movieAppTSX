@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
-import { MovieContext, MovieContextType } from "../context/MovieContext";
-import MovieType from "../types/MovieType";
+import { MovieContext, MovieContextType } from "../../context/MovieContext";
+import MovieType from "../../types/MovieType";
 import ConfirmDelete from "./ConfirmDelete";
 
 function MovieInfo() {
