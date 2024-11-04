@@ -1,5 +1,5 @@
 import MovieType from "../types/MovieType";
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useContext /* useEffect */ } from "react";
 import { db } from "../firebase/Firebase";
 import {
   collection,
@@ -14,12 +14,10 @@ import {
 import { AuthContext } from "../firebase/AuthContext";
 
 export interface MovieContextType {
-  movies: MovieType[];
-  // Should rename this or something - identical to useState declaration
   createMovie: (movie: MovieType) => Promise<void>;
-  getMovieList: () => Promise<void>;
-  getMovie: (id: string) => Promise<MovieType | null>;
-  deleteMovie: (id: string) => Promise<void>;
+  getMovieList: (targetUserId: string) => Promise<MovieType[]>;
+  getMovie: (movieId: string) => Promise<MovieType | null>;
+  deleteMovie: (movieId: string) => Promise<void>;
   updateMovie: (movie: MovieType) => void;
 }
 
@@ -28,12 +26,21 @@ export const MovieContext = createContext<MovieContextType | null>(null);
 export const MovieProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [movies, setMovies] = useState<MovieType[]>([]);
-  // If I don't rename "movies" in MovieContextType, should rename the state here (and possibly in getMovieList)
   const { user } = useContext(AuthContext);
-  // const userMovies = user ? `users/${user.uid}/movies` : "";
+
+  // const [userId, setUserId] = useState<string>("");
+
+  // useEffect(() => {
+  //   if (user) {
+  //     setUserId(user.uid);
+  //   }
+  // }, [user]);
+
+  // const userMovies = `users/${userId}/movies`;
+  // We may switch to this codeblock above later if necessary for group-based viewiing/editing methods.
+
   const userMovies = `users/${user?.uid}/movies`;
-  // Test to see if this variable works - may as well reduce code.
+  // For now we stick with this
 
   const createMovie = async (movie: MovieType): Promise<void> => {
     try {
@@ -62,26 +69,33 @@ export const MovieProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const getMovieList = async (): Promise<void> => {
-    const querySnapshot = await getDocs(collection(db, userMovies));
-    const movieList: MovieType[] = querySnapshot.docs.map((doc) => {
-      const movieData = doc.data();
-      return {
-        id: doc.id,
-        title: movieData.title,
-        dateAdded:
-          movieData.dateAdded instanceof Timestamp
-            ? movieData.dateAdded.toDate()
-            : movieData.dateAdded,
-      } as MovieType;
-      // Type assertion here to get rid of.
-    });
-    setMovies(movieList);
-  };
-  // This needs some error handling
+  const getMovieList = async (targetUserId: string): Promise<MovieType[]> => {
+    try {
+      const querySnapshot = await getDocs(
+        collection(db, `users/${targetUserId}/movies`)
+      );
+      const movieList: MovieType[] = querySnapshot.docs.map((doc) => {
+        const movieData = doc.data();
+        return {
+          id: doc.id,
+          title: movieData.title,
+          dateAdded:
+            movieData.dateAdded instanceof Timestamp
+              ? movieData.dateAdded.toDate()
+              : movieData.dateAdded,
+        } as MovieType;
+        // Type assertion here to get rid of.
+      });
 
-  const getMovie = async (id: string): Promise<MovieType | null> => {
-    const docRef = doc(db, userMovies, id);
+      return movieList;
+    } catch (error) {
+      throw new Error("Error! Edit this message later");
+      // Edit message later
+    }
+  };
+
+  const getMovie = async (movieId: string): Promise<MovieType | null> => {
+    const docRef = doc(db, userMovies, movieId);
     try {
       const docSnap = await getDoc(docRef);
       const movieData = docSnap.data() as MovieType;
@@ -108,9 +122,9 @@ export const MovieProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const deleteMovie = async (id: string): Promise<void> => {
+  const deleteMovie = async (movieId: string): Promise<void> => {
     try {
-      const movieRef = doc(db, userMovies, id);
+      const movieRef = doc(db, userMovies, movieId);
       const docSnapshot = await getDoc(movieRef);
 
       if (!docSnapshot.exists()) {
@@ -162,7 +176,6 @@ export const MovieProvider: React.FC<{ children: React.ReactNode }> = ({
   return (
     <MovieContext.Provider
       value={{
-        movies,
         createMovie,
         getMovieList,
         getMovie,

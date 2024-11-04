@@ -7,13 +7,20 @@ import { Link } from "react-router-dom";
 
 function MovieList() {
   const { user, logout } = useContext(AuthContext);
-  const { movies, getMovieList } = useContext(MovieContext) as MovieContextType;
+  const { getMovieList } = useContext(MovieContext) as MovieContextType;
   // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
+  const [movies, setMovies] = useState<MovieType[] | null>(null);
   const [logoutError, setLogoutError] = useState<string | null>(null);
   const [showGroups, setShowGroups] = useState<boolean>(false);
 
   useEffect(() => {
-    getMovieList();
+    const fetchMovies = async () => {
+      if (user) {
+        const movieList = await getMovieList(user.uid);
+        setMovies(movieList);
+      }
+    };
+    fetchMovies();
   }, []);
 
   const displayName: string | null = user ? user.email : "";
@@ -67,7 +74,7 @@ function MovieList() {
       <h1>Hello {displayName}</h1>
       <h2>Here's your movie list:</h2>
       <ul>
-        {movies.map((movie: MovieType) => (
+        {movies?.map((movie: MovieType) => (
           <li key={movie.id}>
             <Link to={`/movies/${movie.id}`}>{movie.title}</Link>
           </li>

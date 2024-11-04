@@ -36,6 +36,7 @@ function MovieInfo() {
     };
     fetchMovie();
   }, [movieId, getMovie]);
+  // What's with this dependency array?
 
   useEffect(() => {
     if (status === "redirecting") {

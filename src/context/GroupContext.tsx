@@ -19,11 +19,11 @@ export interface GroupContextType {
     userId: string,
     userRole: "admin" | "mod" | "member"
   ) => Promise<void>;
+  getGroupList: () => Promise<void>;
+  getGroup: (groupId: string) => Promise<GroupType | null>;
   removeUserFromGroup: () => Promise<void>;
   updateGroup: () => Promise<void>;
   deleteGroup: () => Promise<void>;
-  getGroupList: () => Promise<void>;
-  getGroup: () => Promise<void>;
 }
 
 export const GroupContext = createContext<GroupContextType | null>(null);
@@ -65,34 +65,86 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
     const groupData = groupDoc.data();
 
     try {
-    //   await addDoc(collection(db, `${groupId}/members/${currentUserId}`), {
-    //     groupUserId: userId,
-    //     groupUserName: user?.displayName ? user.displayName : user?.email,
-    //     groupUserRole: userRole,
-    //   });
+      //   await addDoc(collection(db, `${groupId}/members/${currentUserId}`), {
+      //     groupUserId: userId,
+      //     groupUserName: user?.displayName ? user.displayName : user?.email,
+      //     groupUserRole: userRole,
+      //   });
 
       await setDoc(
         doc(db, `groups/${groupId}/members/`, userId),
         {
-        groupUserName: user?.displayName ? user.displayName : user?.email,
-        groupUserRole: userRole,
+          groupUserName: user?.displayName ? user.displayName : user?.email,
+          groupUserRole: userRole,
         },
         { merge: true }
       );
 
-        await setDoc(
-          doc(db, `users/${userId}/groupsJoined/`, groupId),
-          {
-            name: groupData.name,
-            role: userRole,
-          },
-          { merge: true }
-        );
+      await setDoc(
+        doc(db, `users/${userId}/groupsJoined/`, groupId),
+        {
+          name: groupData.name,
+          role: userRole,
+        },
+        { merge: true }
+      );
     } catch (error) {
       throw new Error("Error adding user to group");
       // Edit this message later.
     }
     console.log("User added to group: ", userId);
+  };
+
+  const getGroupList = async (): Promise<void> => {
+    const querySnapshot = await getDocs(
+      collection(db, `users/${user?.uid}/groupsJoined`)
+    );
+    const groupList: GroupType[] = querySnapshot.docs.map((doc) => {
+      const groupData = doc.data();
+      return {
+        id: doc.id,
+        name: groupData.name,
+        members: groupData.members,
+        // Placeholder value for now
+      };
+    });
+    setGroups(groupList);
+  };
+
+  const getGroup = async (groupId: string): Promise<GroupType | null> => {
+    // console.log("Found group with id: ", groupId);
+
+    // const docRef = doc(db, `users/${user?.uid}/groupsJoined/`, groupId);
+    const docRef = doc(db, `groups`, groupId);
+    try {
+      const docSnap = await getDoc(docRef);
+    //   console.log("Doc snap: ", docSnap);
+      const groupData = docSnap.data() as GroupType;
+    //   console.log("Group data: ", groupData);
+      // Type assertions are gross
+
+      const membersSnap = await getDocs(
+        collection(db, `groups/${groupId}/members`)
+      );
+
+      const members = membersSnap.docs.map((memberDoc) => {
+        const memberData = memberDoc.data();
+        return {
+          groupUserId: memberDoc.id,
+          groupUserName: memberData.groupUserName,
+          groupUserRole: memberData.groupUserRole,
+        };
+      });
+
+      return {
+        id: docSnap.id,
+        name: groupData.name,
+        members,
+      };
+    } catch (error) {
+      throw new Error("Group not found!");
+      // Modify error message down the road.
+    }
   };
 
   const removeUserFromGroup = async (): Promise<void> => {
@@ -105,26 +157,6 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const deleteGroup = async (): Promise<void> => {
     console.log("Group deleted");
-  };
-
-  const getGroupList = async (): Promise<void> => {
-    const querySnapshot = await getDocs(
-      collection(db, `users/${user?.uid}/groupsJoined`)
-    );
-    const groupList: GroupType[] = querySnapshot.docs.map((doc) => {
-      const groupData = doc.data();
-      return {
-        id: groupData.id,
-        name: groupData.name,
-        members: groupData.members,
-        // Placeholder value for now
-      };
-    });
-    setGroups(groupList);
-  };
-
-  const getGroup = async (): Promise<void> => {
-    console.log("Found group!");
   };
 
   return (

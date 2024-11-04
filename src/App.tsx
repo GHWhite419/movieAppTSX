@@ -6,6 +6,7 @@ import MovieList from "./components/movies/MovieList.tsx";
 import MovieInfo from "./components/movies/MovieInfo.tsx";
 import MovieForm from "./components/movies/MovieForm.tsx";
 import GroupForm from "./components/groups/GroupForm.tsx";
+import GroupPage from "./components/groups/GroupPage.tsx";
 import { useContext } from "react";
 import { AuthContext } from "./firebase/AuthContext.tsx";
 import { MovieProvider } from "./context/MovieContext.tsx";
@@ -40,6 +41,7 @@ function App() {
                 element={<MovieForm />}
               />
               <Route path="/creategroup" element={<GroupForm />} />
+              <Route path="/groups/:groupId" element={<GroupPage />}></Route>
             </Routes>
           </GroupProvider>
         </MovieProvider>
