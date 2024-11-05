@@ -74,6 +74,7 @@ function MovieList() {
       <h1>Hello {displayName}</h1>
       <h2>Here's your movie list:</h2>
       <ul>
+        {/* We have a conditional render here. If there's no data to display in movies (ie null), we should display a message encouraging the user to add/search for their first movie. */}
         {movies?.map((movie: MovieType) => (
           <li key={movie.id}>
             <Link to={`/movies/${movie.id}`}>{movie.title}</Link>

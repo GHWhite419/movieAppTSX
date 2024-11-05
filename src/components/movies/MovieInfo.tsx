@@ -12,13 +12,13 @@ function MovieInfo() {
   //   Again, eventually move to a null guard instead of a type assertion here.
   const [movie, setMovie] = useState<MovieType | null>(null);
   const [status, setStatus] = useState<string>("loading");
-  const [showModal, setShowModal] = useState<boolean>(false);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [isMovieDeleted, setIsMovieDeleted] = useState<boolean>(false);
 
   const navigate = useNavigate();
 
   const toggleDeleteModal = () => {
-    setShowModal(!showModal);
+    setShowDeleteModal(!showDeleteModal);
   };
 
   useEffect(() => {
@@ -64,7 +64,7 @@ function MovieInfo() {
       console.error("Error deleting movie:", error);
       setStatus("deleteError");
     } finally {
-      setShowModal(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -122,7 +122,7 @@ function MovieInfo() {
       <ConfirmDelete
         movieTitle={movie.title}
         movieId={movie.id}
-        open={showModal}
+        open={showDeleteModal}
         onClose={toggleDeleteModal}
         onConfirm={handleDelete}
       />

@@ -112,15 +112,10 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getGroup = async (groupId: string): Promise<GroupType | null> => {
-    // console.log("Found group with id: ", groupId);
-
-    // const docRef = doc(db, `users/${user?.uid}/groupsJoined/`, groupId);
     const docRef = doc(db, `groups`, groupId);
     try {
       const docSnap = await getDoc(docRef);
-    //   console.log("Doc snap: ", docSnap);
       const groupData = docSnap.data() as GroupType;
-    //   console.log("Group data: ", groupData);
       // Type assertions are gross
 
       const membersSnap = await getDocs(

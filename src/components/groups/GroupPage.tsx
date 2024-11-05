@@ -4,16 +4,23 @@ import { MovieContext, MovieContextType } from "../../context/MovieContext";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 import GroupType from "../../types/GroupType";
 import MovieType from "../../types/MovieType";
+import InviteToGroup from "./InviteToGroup";
 
 function GroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { getMovieList } = useContext(MovieContext) as MovieContextType;
   const { getGroup } = useContext(GroupContext) as GroupContextType;
+  //   2 type assertions
   const [group, setGroup] = useState<GroupType | null>(null);
   const [memberMovies, setMemberMovies] = useState<{
     [userId: string]: MovieType[];
   }>({});
-  //   2 type assertions
+  const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
+  // Should I reduce the number of declarations I have at the top here? 3 useStates, 2 useContexts, and a useParams?
+
+  const toggleInviteModal = () => {
+    setShowInviteModal(!showInviteModal);
+  };
 
   useEffect(() => {
     const fetchGroup = async () => {
@@ -40,7 +47,7 @@ function GroupPage() {
 
   return (
     <>
-      <h1>Hello! Here are your group members: </h1>
+      <h1>Hello {group?.name}! Here are your group members: </h1>
       <ul>
         {group?.members.map(
           (member: {
@@ -61,7 +68,18 @@ function GroupPage() {
         )}
         {/* Map through getGroup return to display member usernames. */}
       </ul>
+      <p>
+        Want to add a friend to the group?
+        <button type="button" onClick={toggleInviteModal}>
+          Invite here.
+        </button>
+      </p>
       <Link to="/">Back to your list</Link>
+      <InviteToGroup
+        open={showInviteModal}
+        onClose={toggleInviteModal}
+        groupId={groupId ? groupId : "404"}
+      />
     </>
   );
 }

@@ -31,5 +31,6 @@ function GroupForm() {
     </>
   );
 }
+// This should redirect to the new group's page.
 
 export default GroupForm;

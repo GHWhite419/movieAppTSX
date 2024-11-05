@@ -28,6 +28,7 @@ function MyGroups() {
           ? "Want to create a new group? Click here!"
           : "Not part of a group? Create one here!"}
       </Link>
+      {/* Refactor this somehow to only highlight the "Click/Create here" as a link, the rest should be a paragraph */}
     </>
   );
 }
