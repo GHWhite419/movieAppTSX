@@ -16,6 +16,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   resetPass: (email: string) => Promise<void>;
+  joinGroupIntent: string | null;
+  setJoinGroupIntent: (groupId: string | null) => void;
 }
 
 export const AuthContext = createContext<AuthContextType>(
@@ -26,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [joinGroupIntent, setJoinGroupIntent] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = onAuthStateChanged(auth, (firebaseUser) => {
@@ -142,7 +145,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, signup, resetPass }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        signup,
+        resetPass,
+        joinGroupIntent,
+        setJoinGroupIntent,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

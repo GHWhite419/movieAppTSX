@@ -1,6 +1,7 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../../firebase/AuthContext";
-import { Link } from "react-router-dom";
+import { GroupContext, GroupContextType } from "../../context/GroupContext";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -17,8 +18,13 @@ const loginSchema = yup.object().shape({
 });
 
 function Login() {
-  const { login } = useContext(AuthContext);
+  const { login, joinGroupIntent, setJoinGroupIntent } =
+    useContext(AuthContext);
+  const { getGroup } = useContext(GroupContext) as GroupContextType;
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [groupName, setGroupName] = useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   const {
     register,
@@ -30,10 +36,24 @@ function Login() {
     reValidateMode: "onSubmit",
   });
 
+  useEffect(() => {
+    if (joinGroupIntent) {
+      getGroup(joinGroupIntent).then((group) => {
+        if (group) setGroupName(group.name);
+      });
+    }
+  }, []);
+
   const onSubmit = async (data: { email: string; password: string }) => {
     try {
       await login(data.email, data.password);
       setLoginError(null);
+      if (joinGroupIntent) {
+        navigate(`/groups/join/${joinGroupIntent}`);
+        setJoinGroupIntent(null);
+      } else {
+        navigate("/movieList");
+      }
     } catch (error) {
       if (error instanceof Error) {
         setLoginError((error as Error).message);
@@ -43,7 +63,11 @@ function Login() {
 
   return (
     <>
-      <h1>Welcome! Please sign in if you have an account</h1>
+      {joinGroupIntent ? (
+        <h1>Sign in to join {groupName}</h1>
+      ) : (
+        <h1>Welcome! Please sign in if you have an account</h1>
+      )}
       {/* Consider changing this h1 later on; may have a h1 displaying title in a parent component. */}
       <form action="submit" onSubmit={handleSubmit(onSubmit)} noValidate>
         <label htmlFor="email">Email</label>

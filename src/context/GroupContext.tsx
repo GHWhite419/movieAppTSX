@@ -137,6 +137,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
         members,
       };
     } catch (error) {
+      console.log("Error finding group with ID:", groupId);
       throw new Error("Group not found!");
       // Modify error message down the road.
     }

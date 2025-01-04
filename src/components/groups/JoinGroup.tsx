@@ -1,17 +1,19 @@
 import { useState, useEffect, useContext } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../firebase/AuthContext";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 
 function JoinGroup() {
   const { groupId } = useParams<{ groupId: string }>();
-  const { user } = useContext(AuthContext);
+  const { user, setJoinGroupIntent } = useContext(AuthContext);
   const { getGroup, addUserToGroup } = useContext(
     GroupContext
   ) as GroupContextType;
   //   Type assertion
   const [groupName, setGroupName] = useState<string>("");
   const [status, setStatus] = useState<string>("");
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchGroup = async () => {
@@ -22,8 +24,9 @@ function JoinGroup() {
             setGroupName(fetchedGroup.name);
             let isMember = false;
             if (!user) {
-              setStatus("noUser");
-              // Will need to redirect to use a login form or something. Either conditionally render on this page or re-use login component.
+              setJoinGroupIntent(groupId);
+              navigate("/");
+              // setStatus("noUser");
             } else {
               for (const member of fetchedGroup.members) {
                 if (member.groupUserId === user?.uid) {
@@ -41,6 +44,7 @@ function JoinGroup() {
           }
         } catch (error) {
           console.error("Error finding group:", error);
+          setStatus("noGroup");
         }
       }
     };
@@ -49,14 +53,14 @@ function JoinGroup() {
 
   const statusMessage = () => {
     switch (status) {
-      case "noUser":
-        return `Log in to join ${groupName}.`;
-      // Interesting...it doesn't display the group's name if there's no user logged in.
+      // case "noUser":
+      //   return `Log in to join ${groupName}.`;
       case "memberExists":
         return `You're already a member of ${groupName}.`;
       case "newMember":
         return `Welcome to ${groupName}!`;
-      // Also doesn't display the group's name if the user isn't already a member. What's that about?
+      case "noGroup":
+        return `${groupName} not found.`;
       default:
         return "";
     }
@@ -70,7 +74,11 @@ function JoinGroup() {
           Click here to redirect to {groupName}
         </Link>
       ) : (
-        <Link to="/">Back</Link>
+        <>
+          <h1>Redirecting...</h1>
+          {/* <Login /> */}
+          {/* <Link to="/">Log in here</Link> */}
+        </>
       )}
     </>
   );

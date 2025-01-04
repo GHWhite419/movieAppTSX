@@ -1,6 +1,7 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../firebase/AuthContext";
-import { Link } from "react-router-dom";
+import { GroupContext, GroupContextType } from "../../context/GroupContext";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -17,8 +18,13 @@ const signupSchema = yup.object().shape({
 });
 
 function SignUp() {
-  const { signup } = useContext(AuthContext);
+  const { signup, joinGroupIntent, setJoinGroupIntent } =
+    useContext(AuthContext);
+  const { getGroup } = useContext(GroupContext) as GroupContextType;
   const [signupError, setSignupError] = useState<string | null>(null);
+  const [groupName, setGroupName] = useState<string | null>(null);
+
+  const navigate = useNavigate();
 
   const {
     register,
@@ -30,10 +36,24 @@ function SignUp() {
     reValidateMode: "onSubmit",
   });
 
+  useEffect(() => {
+    if (joinGroupIntent) {
+      getGroup(joinGroupIntent).then((group) => {
+        if (group) setGroupName(group.name);
+      });
+    }
+  }, []);
+
   const onSubmit = async (data: { email: string; password: string }) => {
     try {
       await signup(data.email, data.password);
       setSignupError(null);
+      if (joinGroupIntent) {
+        navigate(`/groups/join/${joinGroupIntent}`);
+        setJoinGroupIntent(null);
+      } else {
+        navigate("/movieList");
+      }
     } catch (error) {
       if (error instanceof Error) {
         setSignupError((error as Error).message);
@@ -43,7 +63,12 @@ function SignUp() {
 
   return (
     <>
-      <h1>Sign up for an account here!</h1>
+      {joinGroupIntent ? (
+        <h1>Sign up for an account to join {groupName}</h1>
+      ) : (
+        <h1>Sign up for an account here!</h1>
+      )}
+
       <form action="submit" onSubmit={handleSubmit(onSubmit)} noValidate>
         <label htmlFor="email">Email</label>
         <input id="email" type="email" {...register("email")} />

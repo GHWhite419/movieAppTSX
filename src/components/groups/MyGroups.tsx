@@ -23,7 +23,7 @@ function MyGroups() {
           </li>
         ))}
       </ul>
-      <Link to="creategroup">
+      <Link to="/creategroup">
         {isGroupMember
           ? "Want to create a new group? Click here!"
           : "Not part of a group? Create one here!"}

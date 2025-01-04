@@ -88,7 +88,7 @@ function MovieList() {
         ))}
       </ul>
 
-      <Link to="addmovie">Add a movie</Link>
+      <Link to="/addmovie">Add a movie</Link>
       {/* I may want to add a conditional message similar to MyGroups. Something like "Add your first movie to the list", or maybe refer to the search bar.*/}
 
       {/* </body> */}

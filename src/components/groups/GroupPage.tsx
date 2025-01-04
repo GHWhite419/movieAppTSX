@@ -74,7 +74,7 @@ function GroupPage() {
           Invite here.
         </button>
       </p>
-      <Link to="/">Back to your list</Link>
+      <Link to="/movieList">Back to your list</Link>
       <InviteToGroup
         open={showInviteModal}
         onClose={toggleInviteModal}

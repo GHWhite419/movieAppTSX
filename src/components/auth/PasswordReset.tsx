@@ -32,7 +32,7 @@ function PasswordReset() {
       await resetPass(data.email);
       setResetMessage("Check your email to reset your password! Redirecting to login screen...");
       setTimeout(() => {
-        navigate(-1);
+        navigate("/");
       }, 6000);
     } catch (error) {
       if (error instanceof Error) {
