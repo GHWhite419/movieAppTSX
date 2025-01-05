@@ -1,14 +1,21 @@
 import { Link } from "react-router-dom";
 import { useState, useContext, useEffect } from "react";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
+import { AuthContext } from "../../firebase/AuthContext";
 import GroupType from "../../types/GroupType";
 
 function MyGroups() {
   const [isGroupMember, setIsGroupMember] = useState<boolean>(false);
-  const { groups, getGroupList } = useContext(GroupContext) as GroupContextType;
+  const { groups, getGroupList, verifyUserGroupList } = useContext(
+    GroupContext
+  ) as GroupContextType;
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    getGroupList();
+    if (user) {
+      getGroupList(user.uid);
+      verifyUserGroupList(user.uid);
+    }
     if (groups.length !== 0) {
       setIsGroupMember(true);
     }

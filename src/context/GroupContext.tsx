@@ -19,9 +19,10 @@ export interface GroupContextType {
     userId: string,
     userRole: "admin" | "mod" | "member"
   ) => Promise<void>;
-  getGroupList: () => Promise<void>;
+  getGroupList: (userId: string) => Promise<GroupType[] | null>;
   getGroup: (groupId: string) => Promise<GroupType | null>;
   verifyGroupMemberList: (groupId: string) => Promise<void>;
+  verifyUserGroupList: (userId: string) => Promise<void>;
   removeUserFromGroup: () => Promise<void>;
   updateGroup: () => Promise<void>;
   deleteGroup: () => Promise<void>;
@@ -96,19 +97,26 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log("User added to group: ", userId);
   };
 
-  const getGroupList = async (): Promise<void> => {
-    const groupsSnap = await getDocs(
-      collection(db, `users/${user?.uid}/groupsJoined`)
-    );
-    const groupList: GroupType[] = groupsSnap.docs.map((groupDoc) => {
-      const groupData = groupDoc.data();
-      return {
-        id: groupDoc.id,
-        name: groupData.name,
-        members: groupData.members,
-      };
-    });
-    setGroups(groupList);
+  const getGroupList = async (userId: string): Promise<GroupType[] | null> => {
+    try {
+      const groupsSnap = await getDocs(
+        collection(db, `users/${userId}/groupsJoined`)
+      );
+      const groupList: GroupType[] = groupsSnap.docs.map((groupDoc) => {
+        const groupData = groupDoc.data();
+        return {
+          id: groupDoc.id,
+          name: groupData.name,
+          members: groupData.members,
+        };
+      });
+      setGroups(groupList);
+      return groupList;
+    } catch (error) {
+      console.error("Error fetching group list:", error);
+      return null;
+      // Edit this message later.
+    }
   };
 
   const getGroup = async (groupId: string): Promise<GroupType | null> => {
@@ -144,60 +152,105 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const verifyGroupMemberList = async (groupId: string): Promise<void> => {
+    //  Add an over-arching try-catch block
     console.log("Verifying member list...");
-
-    const membersSnap = await getDocs(
-      collection(db, `groups/${groupId}/members`)
-    );
-
-    const memberList = membersSnap.docs.map((memberDoc) => {
-      return memberDoc.id;
-    });
-
-    for (let memberId of memberList) {
-      const groupsSnap = await getDocs(
-        collection(db, `users/${memberId}/groupsJoined`)
+    try {
+      const membersSnap = await getDocs(
+        collection(db, `groups/${groupId}/members`)
       );
 
-      const groupList = groupsSnap.docs.map((groupDoc) => {
-        return groupDoc.id;
+      const memberList = membersSnap.docs.map((memberDoc) => {
+        return memberDoc.id;
       });
 
-      let isGroupInList = false;
-      for (let targetGroup of groupList) {
-        if (targetGroup === groupId) {
-          isGroupInList = true;
-          console.log(`Member ${memberId} has this group in their list!`);
-        }
-      }
-      if (!isGroupInList) {
-        console.log(
-          `Member ${memberId} does not have this group in their list!`
-        );
-        // Add current group to member's groupsJoined list.
-        const groupInfo = await getGroup(groupId);
-        console.log(groupInfo);
-        try {
-          await setDoc(
-            doc(db, `users/${memberId}/groupsJoined/`, groupId),
-            {
-              name: groupInfo?.name,
-              role: "member",
-            },
-            { merge: true }
-          );
-          console.log(
-            `Group ${groupId} successfully added to member ${memberId}'s list!`
-          );
-        } catch (error) {
-          throw new Error("Error adding group to member's list");
-          //  Edit this message later.
-        }
-      }
-    }
+      for (let memberId of memberList) {
+        const groupList = await getGroupList(memberId);
 
-    // console.log(memberList);
-    console.log("Member list verified!");
+        let isGroupInList = false;
+        if (groupList)
+          for (let targetGroup of groupList) {
+            if (targetGroup.id === groupId) {
+              isGroupInList = true;
+              console.log(`Member ${memberId} has this group in their list!`);
+            }
+          }
+        if (!isGroupInList) {
+          console.log(
+            `Member ${memberId} does not have this group in their list!`
+          );
+          const groupInfo = await getGroup(groupId);
+          console.log(groupInfo);
+          try {
+            await setDoc(
+              doc(db, `users/${memberId}/groupsJoined/`, groupId),
+              {
+                name: groupInfo?.name,
+                role: "member",
+              },
+              { merge: true }
+            );
+            console.log(
+              `Group ${groupId} successfully added to member ${memberId}'s list!`
+            );
+          } catch (error) {
+            throw new Error("Error adding group to member's list");
+            //  Edit this message later.
+          }
+        }
+      }
+      console.log("Member list successfully verified!");
+    } catch (error) {
+      throw new Error("Error verifying member list");
+    }
+  };
+
+  const verifyUserGroupList = async (userId: string): Promise<void> => {
+    //  Add an over-arching try-catch block
+    console.log("Verifying group list...");
+    try {
+      const groupList = await getGroupList(userId);
+      if (groupList) {
+        for (let group of groupList) {
+          const groupInfo = await getGroup(group.id);
+          const memberList = groupInfo?.members;
+
+          let isMemberInList = false;
+          if (memberList)
+            for (let member of memberList) {
+              if (member.groupUserId === userId) {
+                isMemberInList = true;
+                console.log(`Group ${group.id} has this user in its list!`);
+              }
+            }
+          if (!isMemberInList) {
+            console.log(
+              `Group ${group.id} does not have this user in its list!`
+            );
+            try {
+              await setDoc(
+                doc(db, `groups/${group.id}/members/`, userId),
+                {
+                  groupUserName: user?.displayName
+                    ? user.displayName
+                    : user?.email,
+                  groupUserRole: "member",
+                },
+                { merge: true }
+              );
+              console.log(
+                `User ${userId} successfully added to group ${group.id}'s list!`
+              );
+            } catch (error) {
+              throw new Error("Error adding user to group's list");
+              //  Edit this message later.
+            }
+          }
+        }
+      }
+      console.log("Group list verified!");
+    } catch (error) {
+      throw new Error("Error verifying group list");
+    }
   };
 
   const removeUserFromGroup = async (): Promise<void> => {
@@ -224,6 +277,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
         getGroupList,
         getGroup,
         verifyGroupMemberList,
+        verifyUserGroupList,
       }}
     >
       {children}
