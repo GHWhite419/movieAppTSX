@@ -9,7 +9,9 @@ import InviteToGroup from "./InviteToGroup";
 function GroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const { getMovieList } = useContext(MovieContext) as MovieContextType;
-  const { getGroup } = useContext(GroupContext) as GroupContextType;
+  const { getGroup, verifyGroupMemberList } = useContext(
+    GroupContext
+  ) as GroupContextType;
   //   2 type assertions
   const [group, setGroup] = useState<GroupType | null>(null);
   const [memberMovies, setMemberMovies] = useState<{
@@ -39,6 +41,8 @@ function GroupPage() {
         } catch (error) {
           console.error("Error fetching movie:", error);
         }
+        verifyGroupMemberList(groupId);
+        // Perhaps find another place to call this function later? It's not directly related to fetching the group. Can be something an admin triggers.
       }
     };
     fetchGroup();

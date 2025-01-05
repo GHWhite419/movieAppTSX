@@ -18,7 +18,7 @@ const signupSchema = yup.object().shape({
 });
 
 function SignUp() {
-  const { signup, joinGroupIntent, setJoinGroupIntent } =
+  const { user, signup, joinGroupIntent, setJoinGroupIntent } =
     useContext(AuthContext);
   const { getGroup } = useContext(GroupContext) as GroupContextType;
   const [signupError, setSignupError] = useState<string | null>(null);
@@ -35,6 +35,12 @@ function SignUp() {
     mode: "onBlur",
     reValidateMode: "onSubmit",
   });
+
+  useEffect(() => {
+    if (user) {
+      navigate("/movieList");
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     if (joinGroupIntent) {

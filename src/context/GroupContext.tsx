@@ -21,6 +21,7 @@ export interface GroupContextType {
   ) => Promise<void>;
   getGroupList: () => Promise<void>;
   getGroup: (groupId: string) => Promise<GroupType | null>;
+  verifyGroupMemberList: (groupId: string) => Promise<void>;
   removeUserFromGroup: () => Promise<void>;
   updateGroup: () => Promise<void>;
   deleteGroup: () => Promise<void>;
@@ -96,16 +97,15 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const getGroupList = async (): Promise<void> => {
-    const querySnapshot = await getDocs(
+    const groupsSnap = await getDocs(
       collection(db, `users/${user?.uid}/groupsJoined`)
     );
-    const groupList: GroupType[] = querySnapshot.docs.map((doc) => {
-      const groupData = doc.data();
+    const groupList: GroupType[] = groupsSnap.docs.map((groupDoc) => {
+      const groupData = groupDoc.data();
       return {
-        id: doc.id,
+        id: groupDoc.id,
         name: groupData.name,
         members: groupData.members,
-        // Placeholder value for now
       };
     });
     setGroups(groupList);
@@ -130,7 +130,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
           groupUserRole: memberData.groupUserRole,
         };
       });
-
+      // verifyMemberList(groupId);
       return {
         id: docSnap.id,
         name: groupData.name,
@@ -141,6 +141,63 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error("Group not found!");
       // Modify error message down the road.
     }
+  };
+
+  const verifyGroupMemberList = async (groupId: string): Promise<void> => {
+    console.log("Verifying member list...");
+
+    const membersSnap = await getDocs(
+      collection(db, `groups/${groupId}/members`)
+    );
+
+    const memberList = membersSnap.docs.map((memberDoc) => {
+      return memberDoc.id;
+    });
+
+    for (let memberId of memberList) {
+      const groupsSnap = await getDocs(
+        collection(db, `users/${memberId}/groupsJoined`)
+      );
+
+      const groupList = groupsSnap.docs.map((groupDoc) => {
+        return groupDoc.id;
+      });
+
+      let isGroupInList = false;
+      for (let targetGroup of groupList) {
+        if (targetGroup === groupId) {
+          isGroupInList = true;
+          console.log(`Member ${memberId} has this group in their list!`);
+        }
+      }
+      if (!isGroupInList) {
+        console.log(
+          `Member ${memberId} does not have this group in their list!`
+        );
+        // Add current group to member's groupsJoined list.
+        const groupInfo = await getGroup(groupId);
+        console.log(groupInfo);
+        try {
+          await setDoc(
+            doc(db, `users/${memberId}/groupsJoined/`, groupId),
+            {
+              name: groupInfo?.name,
+              role: "member",
+            },
+            { merge: true }
+          );
+          console.log(
+            `Group ${groupId} successfully added to member ${memberId}'s list!`
+          );
+        } catch (error) {
+          throw new Error("Error adding group to member's list");
+          //  Edit this message later.
+        }
+      }
+    }
+
+    // console.log(memberList);
+    console.log("Member list verified!");
   };
 
   const removeUserFromGroup = async (): Promise<void> => {
@@ -166,6 +223,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
         deleteGroup,
         getGroupList,
         getGroup,
+        verifyGroupMemberList,
       }}
     >
       {children}

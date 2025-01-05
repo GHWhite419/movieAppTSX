@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../../firebase/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -13,9 +13,15 @@ const resetPassSchema = yup.object().shape({
 });
 
 function PasswordReset() {
-  const { resetPass } = useContext(AuthContext);
+  const { user, resetPass } = useContext(AuthContext);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate("/movieList");
+    }
+  }, [user, navigate]);
 
   const {
     register,
@@ -30,7 +36,9 @@ function PasswordReset() {
   const onSubmit = async (data: { email: string }) => {
     try {
       await resetPass(data.email);
-      setResetMessage("Check your email to reset your password! Redirecting to login screen...");
+      setResetMessage(
+        "Check your email to reset your password! Redirecting to login screen..."
+      );
       setTimeout(() => {
         navigate("/");
       }, 6000);
