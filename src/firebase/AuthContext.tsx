@@ -12,6 +12,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
@@ -28,12 +29,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [joinGroupIntent, setJoinGroupIntent] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
+        setLoading(false);
         console.log("User is signed in");
         // console.log(firebaseUser);
       } else {
@@ -148,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     <AuthContext.Provider
       value={{
         user,
+        loading,
         login,
         logout,
         signup,

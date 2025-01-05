@@ -3,12 +3,19 @@ import { Navigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../firebase/AuthContext";
 
 interface ProtectedRouteProps {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }
 
 function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user } = useContext(AuthContext);
+  const { user, loading } = useContext(AuthContext);
   const location = useLocation();
+
+  console.log("ProtectedRoute: user", user);
+  console.log("ProtectedRoute: location", location);
+
+if (loading) {
+  return <h1>Loading...</h1>;
+}
 
   return user ? (
     children
