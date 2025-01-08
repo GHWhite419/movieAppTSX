@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { AuthContext } from "../../firebase/AuthContext";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 
@@ -11,9 +11,7 @@ function JoinGroup() {
   ) as GroupContextType;
   //   Type assertion
   const [groupName, setGroupName] = useState<string>("");
-  const [status, setStatus] = useState<string>("");
-
-  const navigate = useNavigate();
+  const [status, setStatus] = useState<string>("loading");
 
   useEffect(() => {
     const fetchGroup = async () => {
@@ -25,42 +23,47 @@ function JoinGroup() {
             let isMember = false;
             if (!user) {
               setJoinGroupIntent(groupId);
-              navigate("/");
-              // setStatus("noUser");
+              setStatus("noUser");
+              return;
             } else {
               for (const member of fetchedGroup.members) {
                 if (member.groupUserId === user?.uid) {
                   isMember = true;
                   setStatus("memberExists");
+                  setJoinGroupIntent(null);
                   break;
                 }
               }
               if (isMember === false) {
-                setStatus("newMember");
                 console.log("Member not found!");
-                addUserToGroup(groupId, user.uid, "member");
+                await addUserToGroup(groupId, user.uid, "member");
+                setStatus("newMember");
+                setJoinGroupIntent(null);
               }
             }
           }
         } catch (error) {
           console.error("Error finding group:", error);
           setStatus("noGroup");
+          setJoinGroupIntent(null);
         }
       }
     };
     fetchGroup();
-  }, []);
+  }, [user]);
 
   const statusMessage = () => {
     switch (status) {
-      // case "noUser":
-      //   return `Log in to join ${groupName}.`;
+      case "noUser":
+        return `Log in to join ${groupName}.`;
       case "memberExists":
         return `You're already a member of ${groupName}.`;
       case "newMember":
         return `Welcome to ${groupName}!`;
       case "noGroup":
         return `${groupName} not found.`;
+      case "loading":
+        return "Checking group details...";
       default:
         return "";
     }
@@ -75,9 +78,7 @@ function JoinGroup() {
         </Link>
       ) : (
         <>
-          <h1>Redirecting...</h1>
-          {/* <Login /> */}
-          {/* <Link to="/">Log in here</Link> */}
+          <Link to="/">Log in here</Link>
         </>
       )}
     </>

@@ -91,41 +91,6 @@ function App() {
         </GroupProvider>
       </MovieProvider>
     </>
-    // <>
-    //   {/* <header></header> */}
-    //   {/* <body> */}
-
-    //   {user ? (
-    //     <MovieProvider>
-    //       <GroupProvider>
-    //         <Routes>
-    //           <Route path="/" element={<MovieList />} />
-    //           <Route path="/movies/:movieId" element={<MovieInfo />} />
-    //           <Route path="addmovie" element={<MovieForm />} />
-    //           <Route
-    //             path="/movies/:movieId/editmovie"
-    //             element={<MovieForm />}
-    //           />
-    //           <Route path="/creategroup" element={<GroupForm />} />
-    //           <Route path="/groups/:groupId" element={<GroupPage />} />
-    //           <Route path="/groups/join/:groupId" element={<JoinGroup />} />
-    //         </Routes>
-    //       </GroupProvider>
-    //     </MovieProvider>
-    //   ) : (
-    //     <GroupProvider>
-    //       <Routes>
-    //         <Route path="/" element={<Login />} />
-    //         <Route path="signup" element={<SignUp />} />
-    //         <Route path="passreset" element={<PasswordReset />} />
-    //         <Route path="/groups/join/:groupId" element={<JoinGroup />} />
-    //       </Routes>
-    //     </GroupProvider>
-    //   )}
-
-    //   {/* </body> */}
-    //   {/* <footer></footer> */}
-    // </>
   );
 }
 

@@ -10,9 +10,6 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useContext(AuthContext);
   const location = useLocation();
 
-  console.log("ProtectedRoute: user", user);
-  console.log("ProtectedRoute: location", location);
-
 if (loading) {
   return <h1>Loading...</h1>;
 }

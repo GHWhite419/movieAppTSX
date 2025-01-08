@@ -27,7 +27,7 @@ function InviteToGroup(props: InviteModalProps) {
         <button onClick={props.onClose}>Close</button>
       </div>
     </div>
-    // The div structure here diverges a little from how I set up ConfirmDelete. Will have to ensure it's consistent with ConfirmDelete later on.
+    // The div structure here diverges a little from how I set up DeleteMovie. Will have to ensure it's consistent with DeleteMovie later on.
   );
 }
 

@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
 import { MovieContext, MovieContextType } from "../../context/MovieContext";
 import MovieType from "../../types/MovieType";
-import ConfirmDelete from "./ConfirmDelete";
+import DeleteMovie from "./DeleteMovie";
 
 function MovieInfo() {
   const { movieId } = useParams<{ movieId: string }>();
@@ -119,7 +119,7 @@ function MovieInfo() {
       >
         Error deleting movie. Please try again later.
       </p>
-      <ConfirmDelete
+      <DeleteMovie
         movieTitle={movie.title}
         movieId={movie.id}
         open={showDeleteModal}

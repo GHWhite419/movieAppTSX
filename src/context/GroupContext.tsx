@@ -7,23 +7,26 @@ import {
   setDoc,
   getDocs,
   getDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { AuthContext } from "../firebase/AuthContext";
 import GroupType from "../types/GroupType";
 
 export interface GroupContextType {
-  groups: GroupType[];
+  groups: Omit<GroupType, "members">[];
   createGroup: (name: string) => Promise<void>;
   addUserToGroup: (
     groupId: string,
     userId: string,
     userRole: "admin" | "mod" | "member"
   ) => Promise<void>;
-  getGroupList: (userId: string) => Promise<GroupType[] | null>;
+  getGroupList: (
+    userId: string
+  ) => Promise<Omit<GroupType, "members">[] | null>;
   getGroup: (groupId: string) => Promise<GroupType | null>;
   verifyGroupMemberList: (groupId: string) => Promise<void>;
   verifyUserGroupList: (userId: string) => Promise<void>;
-  removeUserFromGroup: () => Promise<void>;
+  removeUserFromGroup: (groupId: string, userId: string) => Promise<void>;
   updateGroup: () => Promise<void>;
   deleteGroup: () => Promise<void>;
 }
@@ -33,7 +36,7 @@ export const GroupContext = createContext<GroupContextType | null>(null);
 export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [groups, setGroups] = useState<GroupType[]>([]);
+  const [groups, setGroups] = useState<Omit<GroupType, "members">[]>([]);
   const { user } = useContext(AuthContext);
   const currentUserId = user ? user.uid : "";
 
@@ -42,7 +45,6 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const docRef = await addDoc(collection(db, "groups"), {
         name: name,
-        // members: [{}],
       });
       //   Need to somehow retrieve the group's new id.
       addUserToGroup(docRef.id, currentUserId, "admin");
@@ -56,60 +58,45 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
     groupId: string,
     userId: string,
     userRole: "admin" | "mod" | "member"
-  ): Promise<void> => {
-    // I also want to add the group to the user's groupsJoined list, with id and name.
-    const groupRef = doc(db, `groups/${groupId}`);
-    const groupDoc = await getDoc(groupRef);
-    if (!groupDoc.exists()) {
-      throw new Error("Error adding user to group. Group not found.");
-    }
-
-    const groupData = groupDoc.data();
+  ) => {
+    const batch = writeBatch(db);
 
     try {
-      //   await addDoc(collection(db, `${groupId}/members/${currentUserId}`), {
-      //     groupUserId: userId,
-      //     groupUserName: user?.displayName ? user.displayName : user?.email,
-      //     groupUserRole: userRole,
-      //   });
+      const groupMemberRef = doc(db, `groups/${groupId}/members`, userId);
+      const userGroupRef = doc(db, `users/${userId}/groupsJoined`, groupId);
 
-      await setDoc(
-        doc(db, `groups/${groupId}/members/`, userId),
-        {
-          groupUserName: user?.displayName ? user.displayName : user?.email,
-          groupUserRole: userRole,
-        },
-        { merge: true }
-      );
+      batch.set(groupMemberRef, {
+        groupUserName: user?.displayName ? user.displayName : user?.email,
+        groupUserRole: userRole,
+      });
+      batch.set(userGroupRef, {
+        name: groupId,
+        role: userRole,
+      });
 
-      await setDoc(
-        doc(db, `users/${userId}/groupsJoined/`, groupId),
-        {
-          name: groupData.name,
-          role: userRole,
-        },
-        { merge: true }
-      );
+      await batch.commit();
     } catch (error) {
       throw new Error("Error adding user to group");
       // Edit this message later.
     }
-    console.log("User added to group: ", userId);
   };
 
-  const getGroupList = async (userId: string): Promise<GroupType[] | null> => {
+  const getGroupList = async (
+    userId: string
+  ): Promise<Omit<GroupType, "members">[] | null> => {
     try {
       const groupsSnap = await getDocs(
         collection(db, `users/${userId}/groupsJoined`)
       );
-      const groupList: GroupType[] = groupsSnap.docs.map((groupDoc) => {
-        const groupData = groupDoc.data();
-        return {
-          id: groupDoc.id,
-          name: groupData.name,
-          members: groupData.members,
-        };
-      });
+      const groupList: Omit<GroupType, "members">[] = groupsSnap.docs.map(
+        (groupDoc) => {
+          const groupData = groupDoc.data();
+          return {
+            id: groupDoc.id,
+            name: groupData.name,
+          };
+        }
+      );
       setGroups(groupList);
       return groupList;
     } catch (error) {
@@ -138,7 +125,6 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
           groupUserRole: memberData.groupUserRole,
         };
       });
-      // verifyMemberList(groupId);
       return {
         id: docSnap.id,
         name: groupData.name,
@@ -172,6 +158,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
             if (targetGroup.id === groupId) {
               isGroupInList = true;
               console.log(`Member ${memberId} has this group in their list!`);
+              break;
             }
           }
         if (!isGroupInList) {
@@ -179,7 +166,6 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
             `Member ${memberId} does not have this group in their list!`
           );
           const groupInfo = await getGroup(groupId);
-          console.log(groupInfo);
           try {
             await setDoc(
               doc(db, `users/${memberId}/groupsJoined/`, groupId),
@@ -220,6 +206,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
               if (member.groupUserId === userId) {
                 isMemberInList = true;
                 console.log(`Group ${group.id} has this user in its list!`);
+                break;
               }
             }
           if (!isMemberInList) {
@@ -253,8 +240,20 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const removeUserFromGroup = async (): Promise<void> => {
-    console.log("User removed from group");
+  const removeUserFromGroup = async (groupId: string, userId: string) => {
+    const batch = writeBatch(db);
+    try {
+      const groupMemberRef = doc(db, `groups/${groupId}/members`, userId);
+      const userGroupRef = doc(db, `users/${userId}/groupsJoined`, groupId);
+
+      batch.delete(groupMemberRef);
+      batch.delete(userGroupRef);
+
+      await batch.commit();
+    } catch (error) {
+      throw new Error("Error removing user from group");
+      // Edit this message
+    }
   };
 
   const updateGroup = async (): Promise<void> => {
