@@ -37,7 +37,7 @@ export const MovieProvider: React.FC<{ children: React.ReactNode }> = ({
   // }, [user]);
 
   // const userMovies = `users/${userId}/movies`;
-  // We may switch to this codeblock above later if necessary for group-based viewiing/editing methods.
+  // We may switch to this codeblock above later if necessary for group-based viewing/editing methods.
 
   const userMovies = `users/${user?.uid}/movies`;
   // For now we stick with this

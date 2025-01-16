@@ -13,6 +13,7 @@ import JoinGroup from "./components/groups/JoinGroup.tsx";
 // import { AuthContext } from "./firebase/AuthContext.tsx";
 import { MovieProvider } from "./context/MovieContext.tsx";
 import { GroupProvider } from "./context/GroupContext.tsx";
+import { VotingProvider } from "./context/VotingContext.tsx";
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./utility/ProtectedRoute.tsx";
 
@@ -23,63 +24,67 @@ function App() {
     <>
       <MovieProvider>
         <GroupProvider>
-          <Routes>
-            {/* Public Routes - Any user can view these*/}
-            <Route path="/" element={<Login />} />
-            <Route path="signup" element={<SignUp />} />
-            <Route path="passreset" element={<PasswordReset />} />
-            <Route path="/groups/join/:groupId" element={<JoinGroup />} />
+            <Routes>
+              {/* Public Routes - Any user can view these*/}
+              <Route path="/" element={<Login />} />
+              <Route path="signup" element={<SignUp />} />
+              <Route path="passreset" element={<PasswordReset />} />
+              <Route path="/groups/join/:groupId" element={<JoinGroup />} />
 
-            {/* Private Routes - Authentication required*/}
-            <Route
-              path="movieList"
-              element={
-                <ProtectedRoute>
-                  <MovieList />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/movies/:movieId"
-              element={
-                <ProtectedRoute>
-                  <MovieInfo />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="addmovie"
-              element={
-                <ProtectedRoute>
-                  <MovieForm />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/movies/:movieId/editmovie"
-              element={
-                <ProtectedRoute>
-                  <MovieForm />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/creategroup"
-              element={
-                <ProtectedRoute>
-                  <GroupForm />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/groups/:groupId"
-              element={
-                <ProtectedRoute>
-                  <GroupPage />
-                </ProtectedRoute>
-              }
-            />
-            {/* <Route
+              {/* Private Routes - Authentication required*/}
+              <Route
+                path="movieList"
+                element={
+                  <ProtectedRoute>
+                    <MovieList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/movies/:movieId"
+                element={
+                  <ProtectedRoute>
+                    <MovieInfo />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="addmovie"
+                element={
+                  <ProtectedRoute>
+                    <MovieForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/movies/:movieId/editmovie"
+                element={
+                  <ProtectedRoute>
+                    <MovieForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/creategroup"
+                element={
+                  <ProtectedRoute>
+                    <GroupForm />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/groups/:groupId"
+                element={
+                  <VotingProvider>
+                    <ProtectedRoute>
+                      <GroupPage />
+                    </ProtectedRoute>
+                  </VotingProvider>
+                  // Possible to use the VotingProvider here only?
+                }
+              />
+
+              {/* <Route
               path="/groups/join/:groupId"
               element={
                 <ProtectedRoute>
@@ -87,7 +92,7 @@ function App() {
                 </ProtectedRoute>
               }
             /> */}
-          </Routes>
+            </Routes>
         </GroupProvider>
       </MovieProvider>
     </>

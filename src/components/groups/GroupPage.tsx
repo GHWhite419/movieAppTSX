@@ -1,8 +1,9 @@
 import { Link, useParams } from "react-router-dom";
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { MovieContext, MovieContextType } from "../../context/MovieContext";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 import { AuthContext } from "../../firebase/AuthContext";
+import { VotingContext, VotingContextType } from "../../context/VotingContext";
 import GroupType from "../../types/GroupType";
 import MovieType from "../../types/MovieType";
 import InviteToGroup from "./InviteToGroup";
@@ -15,7 +16,10 @@ function GroupPage() {
     GroupContext
   ) as GroupContextType;
   const { user } = useContext(AuthContext);
-  //   2 type assertions
+  const { voteForMovie, unvoteForMovie } = useContext(
+    VotingContext
+  ) as VotingContextType;
+  //   3 type assertions
   const [group, setGroup] = useState<GroupType | null>(null);
   const [memberMovies, setMemberMovies] = useState<{
     [userId: string]: MovieType[];
@@ -76,6 +80,10 @@ function GroupPage() {
     fetchUserRole();
   }, [group]);
 
+  // useEffect(() => {
+
+  // })
+
   const toggleRemoveModal = (member?: {
     groupUserId: string;
     groupUserName: string;
@@ -96,13 +104,37 @@ function GroupPage() {
     fetchGroup();
   };
 
+  const handleCheckboxChange = (
+    userId: string,
+    movieId: string,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!user || !groupId) {
+      throw new Error("User or groupId is missing");
+    }
+    if (e.target.checked) {
+      voteForMovie({
+        userId: userId,
+        votingUserId: user.uid,
+        movieId: movieId,
+        groupId: groupId,
+      });
+    } else if (!e.target.checked) {
+      unvoteForMovie({
+        userId: userId,
+        votingUserId: user.uid,
+        movieId: movieId,
+        groupId: groupId,
+      });
+    } else {
+      throw new Error("Unknown Error voting");
+      // Modify this message later perhaps
+    }
+  };
+
   return (
     <>
       <h1>Hello {group?.name}! Here are your group members: </h1>
-      {/* <h2>
-        Hello {user?.displayName ? user?.displayName : user?.email}, your role in
-        this group: {userRole}
-      </h2> */}
       <ul>
         {group?.members.map(
           (member: {
@@ -122,7 +154,20 @@ function GroupPage() {
               ) : null}
               <ul>
                 {(memberMovies[member.groupUserId] || []).map((movie) => (
-                  <li key={movie.id}>{movie.title}</li>
+                  <li key={movie.id}>
+                    {movie.title}
+                    {user && member.groupUserId !== user.uid ? (
+                      <input
+                        type="checkbox"
+                        id={`vote-${movie.id}-${member.groupUserId}`}
+                        name={`vote-${movie.id}-${member.groupUserId}`}
+                        onChange={(e) =>
+                          handleCheckboxChange(member.groupUserId, movie.id, e)
+                        }
+                      />
+                    ) : //Should be able to populate id and name with dynamic info (ex: id=vote{movieId})
+                    null}
+                  </li>
                 ))}
                 {/*This display's the user's list. May be conditionally rendered once a user clicks on them.  */}
               </ul>
