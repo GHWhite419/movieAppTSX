@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AuthContext } from "../../firebase/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 
 function JoinGroup() {

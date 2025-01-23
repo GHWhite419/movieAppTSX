@@ -1,6 +1,6 @@
 import MovieType from "../types/MovieType";
 import React, { createContext, useContext /* useEffect */ } from "react";
-import { db } from "../firebase/Firebase";
+import { db } from "../utility/Firebase";
 import {
   collection,
   addDoc,
@@ -11,7 +11,7 @@ import {
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
-import { AuthContext } from "../firebase/AuthContext";
+import { AuthContext } from "./AuthContext";
 
 export interface MovieContextType {
   createMovie: (movie: MovieType) => Promise<void>;

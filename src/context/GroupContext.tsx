@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
-import { db } from "../firebase/Firebase";
+import { db } from "../utility/Firebase";
 import {
   collection,
   doc,
@@ -9,7 +9,7 @@ import {
   getDoc,
   writeBatch,
 } from "firebase/firestore";
-import { AuthContext } from "../firebase/AuthContext";
+import { AuthContext } from "./AuthContext";
 import GroupType from "../types/GroupType";
 
 export interface GroupContextType {

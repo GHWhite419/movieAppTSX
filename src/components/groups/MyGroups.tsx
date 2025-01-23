@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState, useContext, useEffect } from "react";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
-import { AuthContext } from "../../firebase/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 import GroupType from "../../types/GroupType";
 
 function MyGroups() {
@@ -24,11 +24,12 @@ function MyGroups() {
   return (
     <>
       <ul>
-        {groups.map((group: GroupType) => (
+        {groups.map((group: Omit<GroupType, "members">) => (
           <li key={group.id}>
             <Link to={`/groups/${group.id}`}>{group.name}</Link>
           </li>
         ))}
+        {/* Damnit */}
       </ul>
       <Link to="/creategroup">
         {isGroupMember

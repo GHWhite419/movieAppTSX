@@ -1,14 +1,16 @@
 import React, { createContext } from "react";
-import { db } from "../firebase/Firebase";
+import { db } from "../utility/Firebase";
 import {
   doc,
-  // getDoc,
+  getDocs,
+  query,
+  collection,
   // setDoc, updateDoc
   runTransaction,
 } from "firebase/firestore";
 
 export interface VotingContextType {
-  getVotes: (userId: string) => Promise<void>;
+  getVotes: (userId: string, groupId: string) => Promise<void>;
   voteForMovie: ({
     userId,
     votingUserId,
@@ -35,8 +37,20 @@ export const VotingContext = createContext<VotingContextType | null>(null);
 export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const getVotes = async (userId: string) => {
+  const getVotes = async (userId: string, groupId: string) => {
     // Fetch votes from database
+    try {
+      const voteQuery = query(
+        collection(db, `groups/${groupId}/members/${userId}`)
+      );
+
+      const querySnapshot = await getDocs(voteQuery);
+      querySnapshot.forEach((doc) => {
+        console.log(doc.id, " => ", doc.data());
+      });
+    } catch {
+      throw new Error("Error getting votes.");
+    }
   };
 
   const voteForMovie = async ({

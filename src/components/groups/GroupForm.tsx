@@ -27,7 +27,7 @@ function GroupForm() {
         />
         <button type="submit">Create group</button>
       </form>
-      <Link to="/movieList">Cancel</Link>
+      <Link to="/home">Cancel</Link>
     </>
   );
 }

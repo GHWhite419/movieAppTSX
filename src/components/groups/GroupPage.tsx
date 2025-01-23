@@ -1,40 +1,33 @@
 import { Link, useParams } from "react-router-dom";
-import React, { useContext, useEffect, useState } from "react";
-import { MovieContext, MovieContextType } from "../../context/MovieContext";
+import { useContext, useEffect, useState } from "react";
+// import { MovieContext, MovieContextType } from "../../context/MovieContext";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
-import { AuthContext } from "../../firebase/AuthContext";
-import { VotingContext, VotingContextType } from "../../context/VotingContext";
+// import { AuthContext } from "../../firebase/AuthContext";
+// import { VotingContext, VotingContextType } from "../../context/VotingContext";
 import GroupType from "../../types/GroupType";
-import MovieType from "../../types/MovieType";
+// import MovieType from "../../types/MovieType";
 import InviteToGroup from "./InviteToGroup";
-import RemoveUser from "./RemoveUser";
+// import RemoveUser from "./RemoveUser";
 
 function GroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
-  const { getMovieList } = useContext(MovieContext) as MovieContextType;
-  const { getGroup, verifyGroupMemberList, removeUserFromGroup } = useContext(
+  const { getGroup, verifyGroupMemberList } = useContext(
     GroupContext
   ) as GroupContextType;
-  const { user } = useContext(AuthContext);
-  const { voteForMovie, unvoteForMovie } = useContext(
-    VotingContext
-  ) as VotingContextType;
-  //   3 type assertions
+  // const { user } = useContext(AuthContext);
+  //   2 type assertions
   const [group, setGroup] = useState<GroupType | null>(null);
-  const [memberMovies, setMemberMovies] = useState<{
-    [userId: string]: MovieType[];
-  }>({});
   const [showInviteModal, setShowInviteModal] = useState<boolean>(false);
-  const [userRole, setUserRole] = useState<"admin" | "mod" | "member">(
-    "member"
-  );
-  const [showRemoveModal, setShowRemoveModal] = useState<boolean>(false);
-  const [targetUser, setTargetUser] = useState<{
-    groupUserId: string;
-    groupUserName: string;
-  } | null>(null);
 
-  // Should I reduce the number of declarations I have at the top here? 6 useStates, 2 useContexts, and a useParams?
+  // const [userRole, setUserRole] = useState<"admin" | "mod" | "member">(
+  //   "member"
+  // );
+  // The userRole state may still be important at this level.
+
+  // const [votes, setVotes] = useState
+  // This useState needs to track which movies have been voted on for each list. The ones already voted should be checked, and once a number of movies are checked equal to votesAllowed, the rest of the boxes should be greyed out.
+
+  // Should I reduce the number of declarations I have at the top here? 6-7 useStates, 4 useContexts, and a useParams?
 
   const toggleInviteModal = () => {
     setShowInviteModal(!showInviteModal);
@@ -45,14 +38,14 @@ function GroupPage() {
       try {
         const fetchedGroup = await getGroup(groupId);
         setGroup(fetchedGroup);
-        if (fetchedGroup) {
-          const targetMemberMovies: { [userId: string]: MovieType[] } = {};
-          for (const member of fetchedGroup.members) {
-            const movieList = await getMovieList(member.groupUserId);
-            targetMemberMovies[member.groupUserId] = movieList;
-          }
-          setMemberMovies(targetMemberMovies);
-        }
+        // if (fetchedGroup) {
+        // const targetMemberMovies: { [userId: string]: MovieType[] } = {};
+        // for (const member of fetchedGroup.members) {
+        //   const movieList = await getMovieList(member.groupUserId);
+        //   targetMemberMovies[member.groupUserId] = movieList;
+        // }
+        // setMemberMovies(targetMemberMovies);
+        // }
       } catch (error) {
         console.error("Error fetching movie:", error);
       }
@@ -66,71 +59,20 @@ function GroupPage() {
   }, []);
   //  May need to call something in this dependency array? idk
 
-  useEffect(() => {
-    const fetchUserRole = () => {
-      if (group && user) {
-        for (const member of group.members) {
-          if (member.groupUserId === user.uid) {
-            setUserRole(member.groupUserRole);
-            break;
-          }
-        }
-      }
-    };
-    fetchUserRole();
-  }, [group]);
-
   // useEffect(() => {
+  //   const fetchUserRole = () => {
+  //     if (group && user) {
+  //       for (const member of group.members) {
+  //         if (member.groupUserId === user.uid) {
+  //           setUserRole(member.groupUserRole);
+  //           break;
+  //         }
+  //       }
+  //     }
+  //   };
+  //   fetchUserRole();
+  // }, [group]);
 
-  // })
-
-  const toggleRemoveModal = (member?: {
-    groupUserId: string;
-    groupUserName: string;
-  }) => {
-    if (member) {
-      setTargetUser(member);
-      setShowRemoveModal(true);
-    } else {
-      setTargetUser(null);
-      setShowRemoveModal(false);
-    }
-  };
-
-  const handleConfirmRemove = async () => {
-    if (group && targetUser)
-      await removeUserFromGroup(group.id, targetUser.groupUserId);
-    setShowRemoveModal(false);
-    fetchGroup();
-  };
-
-  const handleCheckboxChange = (
-    userId: string,
-    movieId: string,
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    if (!user || !groupId) {
-      throw new Error("User or groupId is missing");
-    }
-    if (e.target.checked) {
-      voteForMovie({
-        userId: userId,
-        votingUserId: user.uid,
-        movieId: movieId,
-        groupId: groupId,
-      });
-    } else if (!e.target.checked) {
-      unvoteForMovie({
-        userId: userId,
-        votingUserId: user.uid,
-        movieId: movieId,
-        groupId: groupId,
-      });
-    } else {
-      throw new Error("Unknown Error voting");
-      // Modify this message later perhaps
-    }
-  };
 
   return (
     <>
@@ -143,38 +85,14 @@ function GroupPage() {
             groupUserRole: "admin" | "mod" | "member";
           }) => (
             <li key={member.groupUserId}>
-              <h2>{member.groupUserName}</h2>
-              {member.groupUserRole !== "admin" &&
-              member.groupUserId !== user?.uid &&
-              (userRole === "admin" || userRole === "mod") &&
-              !(member.groupUserRole === "mod" && userRole === "mod") ? (
-                <button type="button" onClick={() => toggleRemoveModal(member)}>
-                  Remove this user
-                </button>
-              ) : null}
-              <ul>
-                {(memberMovies[member.groupUserId] || []).map((movie) => (
-                  <li key={movie.id}>
-                    {movie.title}
-                    {user && member.groupUserId !== user.uid ? (
-                      <input
-                        type="checkbox"
-                        id={`vote-${movie.id}-${member.groupUserId}`}
-                        name={`vote-${movie.id}-${member.groupUserId}`}
-                        onChange={(e) =>
-                          handleCheckboxChange(member.groupUserId, movie.id, e)
-                        }
-                      />
-                    ) : //Should be able to populate id and name with dynamic info (ex: id=vote{movieId})
-                    null}
-                  </li>
-                ))}
-                {/*This display's the user's list. May be conditionally rendered once a user clicks on them.  */}
-              </ul>
+              <h2>
+                <Link to={`members/${member.groupUserId}`}>
+                  {member.groupUserName}
+                </Link>
+              </h2>
             </li>
           )
         )}
-        {/* Map through getGroup return to display member usernames. */}
       </ul>
       <p>
         Want to add a friend to the group?
@@ -182,18 +100,11 @@ function GroupPage() {
           Invite here.
         </button>
       </p>
-      <Link to="/movieList">Back to your list</Link>
+      <Link to="/home">Back to your list</Link>
       <InviteToGroup
         open={showInviteModal}
         onClose={toggleInviteModal}
         groupId={groupId ? groupId : "404"}
-      />
-      <RemoveUser
-        open={showRemoveModal}
-        onClose={toggleRemoveModal}
-        onConfirm={handleConfirmRemove}
-        userId={targetUser?.groupUserId}
-        userDisplayName={targetUser?.groupUserName}
       />
     </>
   );

@@ -207,7 +207,7 @@ function MovieForm() {
         </button>
       </form>
       {formError && <p>{formError}</p>}
-      <Link to="/movieList">Cancel</Link>
+      <Link to="/home">Cancel</Link>
     </>
   );
   //   Input labels should match those on MovieInfo

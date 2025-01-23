@@ -1,5 +1,5 @@
 import React, { useEffect, useState, createContext } from "react";
-import { auth, db } from "./Firebase";
+import { auth, db } from "../utility/Firebase";
 import {
   User,
   onAuthStateChanged,

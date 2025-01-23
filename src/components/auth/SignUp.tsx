@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect } from "react";
-import { AuthContext } from "../../firebase/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -38,7 +38,7 @@ function SignUp() {
 
   useEffect(() => {
     if (user) {
-      navigate("/movieList");
+      navigate("/home");
     }
   }, [user, navigate]);
 
@@ -58,7 +58,7 @@ function SignUp() {
         navigate(`/groups/join/${joinGroupIntent}`);
         setJoinGroupIntent(null);
       } else {
-        navigate("/movieList");
+        navigate("/home");
       }
     } catch (error) {
       if (error instanceof Error) {

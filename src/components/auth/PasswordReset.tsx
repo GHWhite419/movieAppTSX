@@ -1,5 +1,5 @@
 import { useContext, useState, useEffect } from "react";
-import { AuthContext } from "../../firebase/AuthContext";
+import { AuthContext } from "../../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -19,7 +19,7 @@ function PasswordReset() {
 
   useEffect(() => {
     if (user) {
-      navigate("/movieList");
+      navigate("/home");
     }
   }, [user, navigate]);
 
