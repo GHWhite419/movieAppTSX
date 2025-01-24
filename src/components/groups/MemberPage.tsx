@@ -24,6 +24,8 @@ function MemberPage() {
     "member"
   );
   const [showRemoveModal, setShowRemoveModal] = useState<boolean>(false);
+  const [status, setStatus] = useState<string>("loading");
+  const [isMemberRemoved, setIsMemberRemoved] = useState<boolean>(false);
 
   const navigate = useNavigate();
 
@@ -38,13 +40,17 @@ function MemberPage() {
           );
           if (targetMember) setMember(targetMember);
           else {
+            setStatus("redirecting");
             throw new Error("Member not found");
           }
         } else {
+          setStatus("redirecting");
           throw new Error("Group not found");
         }
-      } catch {
-        throw new Error("Error fetching group/member");
+        setStatus("");
+      } catch (error) {
+        console.error("Error fetching group/member:", error);
+        setStatus("redirecting");
       }
     };
     fetchGroupAndMember();
@@ -64,28 +70,57 @@ function MemberPage() {
     fetchUserRole();
   }, [group]);
 
-  // const toggleRemoveModal = (member?: {
-  //   groupUserId: string;
-  //   groupUserName: string;
-  // }) => {
-  //   if (member) {
-  //     setShowRemoveModal(true);
-  //   } else {
-  //     setShowRemoveModal(false);
-  //   }
-  // };
+  useEffect(() => {
+    if (status === "redirecting") {
+      const timer = setTimeout(() => {
+        navigate(-1);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else if (status === "deleteError") {
+      const timer = setTimeout(() => {
+        setStatus("");
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
 
   const toggleRemoveModal = (member?: GroupType["members"][number]) => {
     setShowRemoveModal(Boolean(member));
   };
 
   const handleConfirmRemove = async () => {
-    if (group && member)
-      await removeUserFromGroup(group.id, member.groupUserId);
-    setShowRemoveModal(false);
-    // fetchGroup();
+    try {
+      if (group && member) {
+        await removeUserFromGroup(group.id, member.groupUserId);
+        setMember(null);
+        setIsMemberRemoved(true);
+        setStatus("redirecting");
+      }
+    } catch (error) {
+      console.error("Error removing user:", error);
+      setStatus("removeError");
+    } finally {
+      setShowRemoveModal(false);
+    }
+
     // Redirect to GroupPage
   };
+
+  if (status === "loading") return <p>Loading...</p>;
+
+  if (!member) {
+    if (isMemberRemoved === true)
+      return (
+        <p>Member removed from {group?.name}. Redirecting to your list...</p>
+      );
+    else {
+      return (
+        <p>
+          Member not found, please try again later. Redirecting to group page...
+        </p>
+      );
+    }
+  }
 
   return (
     <>
@@ -101,6 +136,15 @@ function MemberPage() {
               Remove this user
             </button>
           ) : null}
+          <p
+            style={
+              status === "removeError"
+                ? { display: "flex" }
+                : { display: "none" }
+            }
+          >
+            Error removing user. Please try again later.
+          </p>
           <RemoveUser
             open={showRemoveModal}
             onClose={toggleRemoveModal}

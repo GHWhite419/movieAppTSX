@@ -11,8 +11,8 @@ function MovieInfo() {
   ) as MovieContextType;
   //   Again, eventually move to a null guard instead of a type assertion here.
   const [movie, setMovie] = useState<MovieType | null>(null);
-  const [status, setStatus] = useState<string>("loading");
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [status, setStatus] = useState<string>("loading");
   const [isMovieDeleted, setIsMovieDeleted] = useState<boolean>(false);
 
   const navigate = useNavigate();
