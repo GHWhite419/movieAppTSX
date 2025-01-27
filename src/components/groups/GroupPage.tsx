@@ -4,7 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 // import { AuthContext } from "../../firebase/AuthContext";
 // import { VotingContext, VotingContextType } from "../../context/VotingContext";
-import GroupType from "../../types/GroupType";
+import { GroupType } from "../../types/GroupType";
 // import MovieType from "../../types/MovieType";
 import InviteToGroup from "./InviteToGroup";
 // import RemoveUser from "./RemoveUser";
@@ -72,7 +72,6 @@ function GroupPage() {
   //   };
   //   fetchUserRole();
   // }, [group]);
-
 
   return (
     <>

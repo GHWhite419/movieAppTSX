@@ -2,15 +2,20 @@ import React, { createContext } from "react";
 import { db } from "../utility/Firebase";
 import {
   doc,
-  getDocs,
-  query,
-  collection,
+  // getDocs,
+  getDoc,
+  // query,
+  // collection,
   // setDoc, updateDoc
   runTransaction,
 } from "firebase/firestore";
+import { MemberType } from "../types/GroupType";
 
 export interface VotingContextType {
-  getVotes: (userId: string, groupId: string) => Promise<void>;
+  getVotes: (
+    userId: string,
+    groupId: string
+  ) => Promise<Pick<MemberType, "selectedMovies" | "votesReceived"> | null>;
   voteForMovie: ({
     userId,
     votingUserId,
@@ -37,19 +42,23 @@ export const VotingContext = createContext<VotingContextType | null>(null);
 export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const getVotes = async (userId: string, groupId: string) => {
-    // Fetch votes from database
+  const getVotes = async (
+    userId: string,
+    groupId: string
+  ): Promise<Pick<MemberType, "selectedMovies" | "votesReceived"> | null> => {
     try {
-      const voteQuery = query(
-        collection(db, `groups/${groupId}/members/${userId}`)
-      );
+      const userRef = doc(db, "groups", groupId, "members", userId);
+      const userSnap = await getDoc(userRef);
 
-      const querySnapshot = await getDocs(voteQuery);
-      querySnapshot.forEach((doc) => {
-        console.log(doc.id, " => ", doc.data());
-      });
-    } catch {
-      throw new Error("Error getting votes.");
+      const userData = userSnap.data();
+      return {
+        selectedMovies: userData?.selectedMovies,
+        votesReceived: userData?.votesReceived,
+      };
+    } catch (error) {
+      console.log(error);
+      // throw new Error("Error getting votes");
+      return null;
     }
   };
 
@@ -73,28 +82,43 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const memberData = memberSnap.exists()
           ? memberSnap.data()
-          : { selectedMovies: {}, votesReceived: {} };
+          : { selectedMovies: [], votesReceived: [] };
 
         const groupData = groupSnap.data();
-        const votesAllowed = groupData?.votesAllowed ?? 2;
+        const votesAllowed = groupData?.votesAllowed ?? 1;
 
-        const selectedMovies = memberData.selectedMovies || {};
-        const votesReceived = memberData.votesReceived || {};
+        const selectedMovies = memberData.selectedMovies || [];
+        const votesReceived = memberData.votesReceived || [];
 
-        if (!selectedMovies[movieId]) {
-          selectedMovies[movieId] = { votes: 1, votedBy: [votingUserId] };
-        } else if (!selectedMovies[movieId].votedBy.includes(votingUserId)) {
-          selectedMovies[movieId].votes += 1;
-          selectedMovies[movieId].votedBy.push(votingUserId);
+        const targetMovie = selectedMovies.find(
+          (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
+        );
+
+        if (!targetMovie) {
+          selectedMovies.push({
+            movieId: movieId,
+            totalVotes: 1,
+            votedBy: [votingUserId],
+          });
+        } else if (!targetMovie.votedBy.includes(votingUserId)) {
+          targetMovie.totalVotes += 1;
+          targetMovie.votedBy.push(votingUserId);
         } else {
           throw new Error("User has already voted for this movie.");
         }
 
-        const userVotes = votesReceived[votingUserId] || 0;
-        if (userVotes >= votesAllowed) {
+        const userVote = votesReceived.find(
+          (v: MemberType["votesReceived"][number]) =>
+            v.votingMember === votingUserId
+        );
+
+        if (!userVote) {
+          votesReceived.push({ votingMember: votingUserId, votesCast: 1 });
+        } else if (userVote.votesCast < votesAllowed) {
+          userVote.votesCast += 1;
+        } else {
           throw new Error("Vote limit reached for this user.");
         }
-        votesReceived[votingUserId] = userVotes + 1;
 
         transaction.set(
           memberRef,
@@ -102,7 +126,8 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
           { merge: true }
         );
       });
-    } catch {
+    } catch (error) {
+      console.log("Voting failed:", error);
       throw new Error("Voting failed");
       // Can modify this message later.
     }
@@ -124,20 +149,39 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
         const selectedMovies = memberData?.selectedMovies;
         const votesReceived = memberData?.votesReceived;
 
-        selectedMovies[movieId].votes -= 1;
-        selectedMovies[movieId].votedBy = selectedMovies[
-          movieId
-        ].votedBy.filter(
+        const targetMovieIndex = selectedMovies.findIndex(
+          (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
+        );
+
+        if (targetMovieIndex === -1) {
+          throw new Error("Movie not found in user's selection.");
+        }
+
+        const targetMovie = selectedMovies[targetMovieIndex];
+
+        targetMovie.totalVotes -= 1;
+        targetMovie.votedBy = targetMovie.votedBy.filter(
           (targetUserId: string) => targetUserId !== votingUserId
         );
 
-        if (selectedMovies[movieId].votes === 0) {
-          delete selectedMovies[movieId];
+        if (targetMovie.totalVotes === 0) {
+          selectedMovies.splice(targetMovieIndex, 1);
         }
 
-        const userVotes = votesReceived[votingUserId];
+        const userVoteIndex = votesReceived.findIndex(
+          (v: MemberType["votesReceived"][number]) =>
+            v.votingMember === votingUserId
+        );
 
-        votesReceived[votingUserId] = userVotes - 1;
+        if (userVoteIndex === -1) {
+          throw new Error("User has no votes to remove");
+        }
+
+        const userVote = votesReceived[userVoteIndex];
+
+        userVote.votesCast -= 1;
+
+        // No need to remove userVoteIndex from votesReceived. Users will vote on other movies.
 
         transaction.set(
           memberRef,
@@ -145,7 +189,8 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
           { merge: true }
         );
       });
-    } catch {
+    } catch (error) {
+      console.log("Error removing vote: ", error);
       throw new Error("Error removing vote.");
       // Edit later
     }

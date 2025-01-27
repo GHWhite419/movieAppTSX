@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useState, useContext, useEffect } from "react";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 import { AuthContext } from "../../context/AuthContext";
-import GroupType from "../../types/GroupType";
+import { GroupType } from "../../types/GroupType";
 
 function MyGroups() {
   const [isGroupMember, setIsGroupMember] = useState<boolean>(false);

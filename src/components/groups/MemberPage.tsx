@@ -4,7 +4,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { GroupContext, GroupContextType } from "../../context/GroupContext";
 import MovieList from "../movies/MovieList";
 import RemoveUser from "./RemoveUser";
-import GroupType from "../../types/GroupType";
+import { GroupType, MemberType } from "../../types/GroupType";
 
 function MemberPage() {
   const { groupId, memberId } = useParams<{
@@ -17,9 +17,7 @@ function MemberPage() {
   ) as GroupContextType;
 
   const [group, setGroup] = useState<GroupType | null>(null);
-  const [member, setMember] = useState<GroupType["members"][number] | null>(
-    null
-  );
+  const [member, setMember] = useState<MemberType | null>(null);
   const [userRole, setUserRole] = useState<"admin" | "mod" | "member">(
     "member"
   );
@@ -36,7 +34,7 @@ function MemberPage() {
           const targetGroup = await getGroup(groupId);
           setGroup(targetGroup);
           const targetMember = targetGroup?.members.find(
-            (m) => m.groupUserId === memberId
+            (m: MemberType) => m.groupUserId === memberId
           );
           if (targetMember) setMember(targetMember);
           else {
@@ -84,7 +82,7 @@ function MemberPage() {
     }
   }, [status]);
 
-  const toggleRemoveModal = (member?: GroupType["members"][number]) => {
+  const toggleRemoveModal = (member?: MemberType) => {
     setShowRemoveModal(Boolean(member));
   };
 

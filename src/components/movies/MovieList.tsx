@@ -4,6 +4,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { MovieContext, MovieContextType } from "../../context/MovieContext";
 import { Link } from "react-router-dom";
 import { VotingContext } from "../../context/VotingContext";
+import { MemberType } from "../../types/GroupType";
 
 interface MovieListProps {
   userId?: string;
@@ -17,6 +18,11 @@ function MovieList(props: MovieListProps) {
 
   // I call the VotingContext differently here because HomePage uses this component without the context. This way we don't return null to HomePage, and ensure content actually renders.
   const votingContext = useContext(VotingContext);
+  const getVotes =
+    votingContext?.getVotes ??
+    (() => {
+      console.warn("getVotes called without VotingContext");
+    });
   const voteForMovie =
     votingContext?.voteForMovie ??
     (() => {
@@ -27,11 +33,16 @@ function MovieList(props: MovieListProps) {
     (() => {
       console.warn("unvoteForMovie called without VotingContext");
     });
+
   // const { voteForMovie, unvoteForMovie } = useContext(
   //   VotingContext
   // ) as VotingContextType;
   // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
   const [movies, setMovies] = useState<MovieType[]>([]);
+  const [votes, setVotes] = useState<Pick<
+    MemberType,
+    "selectedMovies" | "votesReceived"
+  > | null>(null);
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -41,35 +52,45 @@ function MovieList(props: MovieListProps) {
       }
     };
     fetchMovies();
+    if (props.context === "group" && props.userId && props.groupId)
+      fetchVotes(props.userId, props.groupId);
   }, []);
 
-  const handleCheckboxChange = (
+  const fetchVotes = async (userId: string, groupId: string) => {
+    const votingData = await getVotes(userId, groupId);
+    if (votingData) setVotes(votingData);
+  };
+
+  const handleCheckboxChange = async (
     userId: string,
     movieId: string,
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    if (!user || !props.groupId || !props.userId) {
-      throw new Error("User or groupId is missing");
-    }
-    if (e.target.checked) {
-      voteForMovie({
-        userId: userId,
-        votingUserId: user.uid,
-        movieId: movieId,
-        groupId: props.groupId,
-      });
-    } else if (!e.target.checked) {
-      unvoteForMovie({
-        userId: userId,
-        votingUserId: user.uid,
-        movieId: movieId,
-        groupId: props.groupId,
-      });
-    } else {
+    try {
+      if (!user || !props.groupId || !props.userId) {
+        throw new Error("User or groupId is missing");
+      }
+      if (e.target.checked) {
+        await voteForMovie({
+          userId: userId,
+          votingUserId: user.uid,
+          movieId: movieId,
+          groupId: props.groupId,
+        });
+      } else {
+        await unvoteForMovie({
+          userId: userId,
+          votingUserId: user.uid,
+          movieId: movieId,
+          groupId: props.groupId,
+        });
+      }
+      await fetchVotes(props.userId, props.groupId);
+    } catch (error) {
+      console.log(error);
       throw new Error("Unknown Error voting");
       // Modify this message later perhaps
     }
-    // getVotes()
   };
 
   return (
@@ -80,14 +101,42 @@ function MovieList(props: MovieListProps) {
           <li key={movie.id}>
             <Link to={`/movies/${movie.id}`}>{movie.title}</Link>
             {props.userId && props.userId !== user?.uid ? (
-              <input
-                type="checkbox"
-                id={`vote-${movie.id}-${props.userId}`}
-                name={`vote-${movie.id}-${props.userId}`}
-                onChange={(e) =>
-                  handleCheckboxChange(props.userId ?? "undefined", movie.id, e)
-                }
-              />
+              <>
+                <input
+                  type="checkbox"
+                  id={`vote-${movie.id}-${props.userId}`}
+                  name={`vote-${movie.id}-${props.userId}`}
+                  checked={
+                    votes?.selectedMovies
+                      ?.find((targetMovie) => targetMovie.movieId === movie.id)
+                      ?.votedBy.includes(user?.uid ?? "") ?? false
+                  }
+                  disabled={
+                    // True if:
+                    // 1. Movie is not voted on by user
+                    // 2. User has already reached votesAllowed limit.
+                    (!votes?.selectedMovies
+                      ?.find((targetMovie) => targetMovie.movieId === movie.id)
+                      ?.votedBy.includes(user?.uid ?? "") &&
+                      votes?.votesReceived?.find(
+                        (targetUser) => targetUser.votingMember === user?.uid
+                      )?.votesCast === 1) ??
+                    false
+                  }
+                  onChange={(e) =>
+                    handleCheckboxChange(
+                      props.userId ?? "undefined",
+                      movie.id,
+                      e
+                    )
+                  }
+                />
+                <label htmlFor={`vote-${movie.id}-${props.userId}`}>
+                  {/* Vote for this movie */}
+                  {/* Need to think about how this text will appear. */}
+                  {/* Perhaps a hover tooltip; at minimum, an sr-only label */}
+                </label>
+              </>
             ) : null}
           </li>
           // Think about what info I want to display in each li. Right now it's title but I'll display:
