@@ -85,7 +85,7 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
           : { selectedMovies: [], votesReceived: [] };
 
         const groupData = groupSnap.data();
-        const votesAllowed = groupData?.votesAllowed ?? 1;
+        const votesAllowed = groupData?.options.votesAllowed ?? 1;
 
         const selectedMovies = memberData.selectedMovies || [];
         const votesReceived = memberData.votesReceived || [];
@@ -196,7 +196,7 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Tiebreak method
+  // Tiebreak method - Do I actually need?
 
   return (
     <VotingContext.Provider value={{ getVotes, voteForMovie, unvoteForMovie }}>

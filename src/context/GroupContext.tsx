@@ -10,10 +10,10 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { AuthContext } from "./AuthContext";
-import GroupType from "../types/GroupType";
+import { GroupType } from "../types/GroupType";
 
 export interface GroupContextType {
-  groups: Omit<GroupType, "members">[];
+  groups: Omit<GroupType, "members" | "options">[];
   createGroup: (name: string) => Promise<void>;
   addUserToGroup: (
     groupId: string,
@@ -22,7 +22,7 @@ export interface GroupContextType {
   ) => Promise<void>;
   getGroupList: (
     userId: string
-  ) => Promise<Omit<GroupType, "members">[] | null>;
+  ) => Promise<Omit<GroupType, "members" | "options">[] | null>;
   getGroup: (groupId: string) => Promise<GroupType | null>;
   verifyGroupMemberList: (groupId: string) => Promise<void>;
   verifyUserGroupList: (userId: string) => Promise<void>;
@@ -36,7 +36,9 @@ export const GroupContext = createContext<GroupContextType | null>(null);
 export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [groups, setGroups] = useState<Omit<GroupType, "members">[]>([]);
+  const [groups, setGroups] = useState<
+    Omit<GroupType, "members" | "options">[]
+  >([]);
   const { user } = useContext(AuthContext);
   const currentUserId = user ? user.uid : "";
 
@@ -45,8 +47,11 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const docRef = await addDoc(collection(db, "groups"), {
         name: name,
+        options: {
+          votesAllowed: 1,
+        },
+        // Possibly create "defaultOptions interface?"
       });
-      //   Need to somehow retrieve the group's new id.
       addUserToGroup(docRef.id, currentUserId, "admin");
     } catch (error) {
       throw new Error("Error creating group.");
@@ -83,20 +88,19 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getGroupList = async (
     userId: string
-  ): Promise<Omit<GroupType, "members">[] | null> => {
+  ): Promise<Omit<GroupType, "members" | "options">[] | null> => {
     try {
       const groupsSnap = await getDocs(
         collection(db, `users/${userId}/groupsJoined`)
       );
-      const groupList: Omit<GroupType, "members">[] = groupsSnap.docs.map(
-        (groupDoc) => {
+      const groupList: Omit<GroupType, "members" | "options">[] =
+        groupsSnap.docs.map((groupDoc) => {
           const groupData = groupDoc.data();
           return {
             id: groupDoc.id,
             name: groupData.name,
           };
-        }
-      );
+        });
       setGroups(groupList);
       return groupList;
     } catch (error) {
@@ -123,12 +127,15 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
           groupUserId: memberDoc.id,
           groupUserName: memberData.groupUserName,
           groupUserRole: memberData.groupUserRole,
+          selectedMovies: memberData.selectedMovies,
+          votesReceived: memberData.votesReceived,
         };
       });
       return {
         id: docSnap.id,
         name: groupData.name,
         members,
+        options: groupData.options,
       };
     } catch (error) {
       console.log("Error finding group with ID:", groupId);

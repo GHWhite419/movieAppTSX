@@ -10,14 +10,16 @@ interface MovieListProps {
   userId?: string;
   context: "home" | "group";
   groupId?: string;
+  votesAllowed?: number;
 }
 
 function MovieList(props: MovieListProps) {
   const { user } = useContext(AuthContext);
   const { getMovieList } = useContext(MovieContext) as MovieContextType;
+  // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
 
-  // I call the VotingContext differently here because HomePage uses this component without the context. This way we don't return null to HomePage, and ensure content actually renders.
   const votingContext = useContext(VotingContext);
+  // I call the VotingContext methods differently here because HomePage uses this component without the context. This way we don't return null to HomePage, and ensure content actually renders.
   const getVotes =
     votingContext?.getVotes ??
     (() => {
@@ -34,15 +36,14 @@ function MovieList(props: MovieListProps) {
       console.warn("unvoteForMovie called without VotingContext");
     });
 
-  // const { voteForMovie, unvoteForMovie } = useContext(
-  //   VotingContext
-  // ) as VotingContextType;
-  // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
   const [movies, setMovies] = useState<MovieType[]>([]);
   const [votes, setVotes] = useState<Pick<
     MemberType,
     "selectedMovies" | "votesReceived"
   > | null>(null);
+  const [tiedMovies, setTiedMovies] = useState<MemberType["selectedMovies"]>(
+    []
+  );
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -93,8 +94,57 @@ function MovieList(props: MovieListProps) {
     }
   };
 
+  const userVotesCast: number | undefined = votes?.votesReceived?.find(
+    (targetUser) => targetUser.votingMember === user?.uid
+  )?.votesCast;
+
+  // const movieVotesReceived = (movieId: string): number | undefined => {
+  //   return votes?.selectedMovies?.find(
+  //     (targetMovie) => targetMovie.movieId === movieId
+  //   )?.totalVotes;
+  // };
+
+  const movieVotesReceived = (movieId: string): number => {
+    const targetMovieVotes = votes?.selectedMovies.find(
+      (targetMovie) => targetMovie.movieId === movieId
+    )?.totalVotes;
+    if (targetMovieVotes) return targetMovieVotes;
+    return 0;
+  };
+
+  useEffect(() => {
+    if (votes && votes.selectedMovies) {
+      let leadMovies: MemberType["selectedMovies"] = [];
+      let leadVoteCount: number = 0;
+      for (let movie of votes.selectedMovies) {
+        if (leadVoteCount < movie.totalVotes) {
+          leadVoteCount = movie.totalVotes;
+        }
+      }
+      for (let movie of votes.selectedMovies) {
+        leadMovies.push(movie);
+      }
+      setTiedMovies(leadMovies);
+      console.log("Tied movies:", leadMovies);
+    }
+  }, [votes]);
+
   return (
     <>
+      {props.context === "group" && props.userId !== user?.uid ? (
+        <h2>
+          You have{" "}
+          {props.votesAllowed && userVotesCast
+            ? props.votesAllowed - userVotesCast
+            : props.votesAllowed}{" "}
+          {props.votesAllowed &&
+          userVotesCast &&
+          props.votesAllowed - userVotesCast === 1
+            ? "vote"
+            : "votes"}{" "}
+          to cast.{" "}
+        </h2>
+      ) : null}
       <ul>
         {/* We have a conditional render here. If there's no data to display in movies (ie null), we should display a message encouraging the user to add/search for their first movie. */}
         {movies?.map((movie: MovieType) => (
@@ -112,15 +162,10 @@ function MovieList(props: MovieListProps) {
                       ?.votedBy.includes(user?.uid ?? "") ?? false
                   }
                   disabled={
-                    // True if:
-                    // 1. Movie is not voted on by user
-                    // 2. User has already reached votesAllowed limit.
                     (!votes?.selectedMovies
                       ?.find((targetMovie) => targetMovie.movieId === movie.id)
                       ?.votedBy.includes(user?.uid ?? "") &&
-                      votes?.votesReceived?.find(
-                        (targetUser) => targetUser.votingMember === user?.uid
-                      )?.votesCast === 1) ??
+                      userVotesCast === props.votesAllowed) ??
                     false
                   }
                   onChange={(e) =>
@@ -136,6 +181,26 @@ function MovieList(props: MovieListProps) {
                   {/* Need to think about how this text will appear. */}
                   {/* Perhaps a hover tooltip; at minimum, an sr-only label */}
                 </label>
+                {props.context === "group" && movieVotesReceived(movie.id) ? (
+                  <p>
+                    has {movieVotesReceived(movie.id)}{" "}
+                    {movieVotesReceived(movie.id) === 1 ? "vote" : "votes"}
+                  </p>
+                ) : null}
+                {props.context === "group" &&
+                user?.uid === props.userId &&
+                movieVotesReceived(movie.id) >= 1 &&
+                tiedMovies.length > 1 ? (
+                  // All votes should be in.
+                  <>
+                    <input
+                      type="checkbox"
+                      id={`tiebreak-${movie.id}-${props.userId}`}
+                      name={`tiebreak-${movie.id}-${props.userId}`}
+                    />
+                    <label htmlFor=""></label>
+                  </>
+                ) : null}
               </>
             ) : null}
           </li>

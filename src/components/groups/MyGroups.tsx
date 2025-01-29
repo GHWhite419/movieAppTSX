@@ -24,12 +24,11 @@ function MyGroups() {
   return (
     <>
       <ul>
-        {groups.map((group: Omit<GroupType, "members">) => (
+        {groups.map((group: Omit<GroupType, "members" | "options">) => (
           <li key={group.id}>
             <Link to={`/groups/${group.id}`}>{group.name}</Link>
           </li>
         ))}
-        {/* Damnit */}
       </ul>
       <Link to="/creategroup">
         {isGroupMember

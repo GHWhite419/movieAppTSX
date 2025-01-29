@@ -2,10 +2,12 @@ export interface GroupType {
   id: string;
   name: string;
   members: MemberType[];
-  // dateCreated: Date()
   //   Wonder if I should import AuthContext User and make this an array of users.
+
+  // dateCreated: Date()
   //   Need to think what other properties I'll need. Might not know until later when I start creating components.
   //   -Possibly an image property, displaying group's logo
+  options: OptionsType;
 }
 
 export interface MemberType {
@@ -22,3 +24,9 @@ export interface MemberType {
     votesCast: number;
   }[];
 }
+
+export interface OptionsType {
+  votesAllowed: number;
+  // Other stuff
+}
+// Should this be a subcollection or a document?
