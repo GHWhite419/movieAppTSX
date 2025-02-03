@@ -196,7 +196,7 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Tiebreak method - Do I actually need?
+  // Select movie method
 
   return (
     <VotingContext.Provider value={{ getVotes, voteForMovie, unvoteForMovie }}>

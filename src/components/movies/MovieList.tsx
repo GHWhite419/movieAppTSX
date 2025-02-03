@@ -11,6 +11,7 @@ interface MovieListProps {
   context: "home" | "group";
   groupId?: string;
   votesAllowed?: number;
+  groupMembers?: MemberType[];
 }
 
 function MovieList(props: MovieListProps) {
@@ -41,9 +42,17 @@ function MovieList(props: MovieListProps) {
     MemberType,
     "selectedMovies" | "votesReceived"
   > | null>(null);
-  const [tiedMovies, setTiedMovies] = useState<MemberType["selectedMovies"]>(
-    []
-  );
+  const [voteStatus, setVoteStatus] = useState<{
+    leadingMovies: string[];
+    leadingVotes: number;
+    runnerUpVotes: number;
+    remainingVotes: number;
+  }>({
+    leadingMovies: [],
+    leadingVotes: 0,
+    runnerUpVotes: 0,
+    remainingVotes: 0,
+  });
 
   useEffect(() => {
     const fetchMovies = async () => {
@@ -98,12 +107,6 @@ function MovieList(props: MovieListProps) {
     (targetUser) => targetUser.votingMember === user?.uid
   )?.votesCast;
 
-  // const movieVotesReceived = (movieId: string): number | undefined => {
-  //   return votes?.selectedMovies?.find(
-  //     (targetMovie) => targetMovie.movieId === movieId
-  //   )?.totalVotes;
-  // };
-
   const movieVotesReceived = (movieId: string): number => {
     const targetMovieVotes = votes?.selectedMovies.find(
       (targetMovie) => targetMovie.movieId === movieId
@@ -112,20 +115,117 @@ function MovieList(props: MovieListProps) {
     return 0;
   };
 
+  // Move this to VotingContext
+  const isTieBreakNeeded = (): boolean => {
+    if (
+      props.context !== "group" ||
+      !votes?.votesReceived ||
+      !props.votesAllowed ||
+      !props.groupMembers
+    )
+      return false;
+
+    const votesReceived = votes.votesReceived;
+    const votesAllowed = props.votesAllowed;
+
+    if (voteStatus.leadingMovies.length < 2) return false;
+
+    if (props.groupMembers.length - 1 === votes.votesReceived.length) {
+      const allVotesCast = votesReceived.every(
+        (member) => member.votesCast >= votesAllowed
+      );
+      if (allVotesCast) return true;
+    }
+
+    return (
+      voteStatus.runnerUpVotes + voteStatus.remainingVotes <
+      voteStatus.leadingVotes
+    );
+  };
+
+  // Move this to VotingContext
+  const isVotingDecided = (): boolean => {
+    if (props.context === "group" && props.groupMembers && props.votesAllowed) {
+      if (voteStatus.leadingMovies.length === 0) return false;
+
+      const groupMembers = props.groupMembers;
+      const votesAllowed = props.votesAllowed;
+
+      if (groupMembers.length - 1 === votes?.votesReceived.length) {
+        const allVotesCast = votes?.votesReceived.every(
+          (member) => member.votesCast >= votesAllowed
+        );
+        if (allVotesCast && voteStatus.leadingMovies.length === 1) return true;
+      }
+
+      return (
+        voteStatus.leadingMovies.length === 1 &&
+        voteStatus.leadingVotes >
+          voteStatus.runnerUpVotes + voteStatus.remainingVotes
+      );
+    }
+    return false;
+  };
+
   useEffect(() => {
-    if (votes && votes.selectedMovies) {
-      let leadMovies: MemberType["selectedMovies"] = [];
-      let leadVoteCount: number = 0;
-      for (let movie of votes.selectedMovies) {
-        if (leadVoteCount < movie.totalVotes) {
-          leadVoteCount = movie.totalVotes;
-        }
+    // Move most of this logic to VotingContext
+    if (
+      !votes?.selectedMovies ||
+      !votes?.votesReceived ||
+      !props.votesAllowed
+    ) {
+      setVoteStatus({
+        leadingMovies: [],
+        leadingVotes: 0,
+        runnerUpVotes: 0,
+        remainingVotes: 0,
+      });
+    } else {
+      const voteCounts: Record<string, number> = {};
+      for (let movie of votes?.selectedMovies) {
+        voteCounts[movie.movieId] = movie.totalVotes || 0;
       }
-      for (let movie of votes.selectedMovies) {
-        leadMovies.push(movie);
+
+      const sortedMovies = Object.entries(voteCounts).sort(
+        (a, b) => b[1] - a[1]
+      );
+
+      if (sortedMovies.length === 0) {
+        setVoteStatus({
+          leadingMovies: [],
+          leadingVotes: 0,
+          runnerUpVotes: 0,
+          remainingVotes: 0,
+        });
+        return;
       }
-      setTiedMovies(leadMovies);
-      console.log("Tied movies:", leadMovies);
+
+      const leadVotes = sortedMovies[0][1];
+      const leadingMoviesList = sortedMovies
+        .filter(([_, votes]) => votes === leadVotes)
+        .map(([movieId]) => movieId);
+
+      const highestVotes = sortedMovies[0][1];
+
+      const nextHighestVotes =
+        sortedMovies.length > leadingMoviesList.length
+          ? sortedMovies[leadingMoviesList.length][1]
+          : 0;
+
+      let totalRemainingVotes = 0;
+      for (let member of votes.votesReceived) {
+        totalRemainingVotes += props.votesAllowed - member.votesCast;
+      }
+
+      setVoteStatus({
+        leadingMovies: leadingMoviesList,
+        leadingVotes: highestVotes,
+        runnerUpVotes: nextHighestVotes,
+        remainingVotes: totalRemainingVotes,
+      });
+      if (isVotingDecided())
+        console.log("Movie selected with ID:", voteStatus.leadingMovies[0]);
+      // Create "selectMovie" method and call it here.
     }
   }, [votes]);
 
@@ -190,7 +290,7 @@ function MovieList(props: MovieListProps) {
                 {props.context === "group" &&
                 user?.uid === props.userId &&
                 movieVotesReceived(movie.id) >= 1 &&
-                tiedMovies.length > 1 ? (
+                isTieBreakNeeded() ? (
                   // All votes should be in.
                   <>
                     <input

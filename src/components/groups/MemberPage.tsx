@@ -125,15 +125,12 @@ function MemberPage() {
       {member ? (
         <>
           <h1>{member.groupUserName}'s list:</h1>
-          {/* <h2>
-            Votes allowed:{" "}
-            {group?.options.votesAllowed ? group?.options.votesAllowed : null}
-          </h2> */}
           <MovieList
             userId={memberId}
             context="group"
             groupId={groupId}
             votesAllowed={group?.options?.votesAllowed}
+            groupMembers={group?.members}
           />
           {member.groupUserRole !== "admin" &&
           member.groupUserId !== user?.uid &&
