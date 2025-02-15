@@ -281,27 +281,27 @@ function MovieList(props: MovieListProps) {
                   {/* Need to think about how this text will appear. */}
                   {/* Perhaps a hover tooltip; at minimum, an sr-only label */}
                 </label>
-                {props.context === "group" && movieVotesReceived(movie.id) ? (
-                  <p>
-                    has {movieVotesReceived(movie.id)}{" "}
-                    {movieVotesReceived(movie.id) === 1 ? "vote" : "votes"}
-                  </p>
-                ) : null}
-                {props.context === "group" &&
-                user?.uid === props.userId &&
-                movieVotesReceived(movie.id) >= 1 &&
-                isTieBreakNeeded() ? (
-                  // All votes should be in.
-                  <>
-                    <input
-                      type="checkbox"
-                      id={`tiebreak-${movie.id}-${props.userId}`}
-                      name={`tiebreak-${movie.id}-${props.userId}`}
-                    />
-                    <label htmlFor=""></label>
-                  </>
-                ) : null}
               </>
+            ) : null}
+            {props.context === "group" &&
+            user?.uid === props.userId &&
+            movieVotesReceived(movie.id) >= 1 &&
+            isTieBreakNeeded() ? (
+              // All votes should be in.
+              <>
+                <input
+                  type="checkbox"
+                  id={`tiebreak-${movie.id}-${props.userId}`}
+                  name={`tiebreak-${movie.id}-${props.userId}`}
+                />
+                <label htmlFor=""></label>
+              </>
+            ) : null}
+            {props.context === "group" && movieVotesReceived(movie.id) ? (
+              <p>
+                has {movieVotesReceived(movie.id)}{" "}
+                {movieVotesReceived(movie.id) === 1 ? "vote" : "votes"}
+              </p>
             ) : null}
           </li>
           // Think about what info I want to display in each li. Right now it's title but I'll display:
