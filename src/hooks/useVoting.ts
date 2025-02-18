@@ -1,34 +1,12 @@
-import React, { createContext } from "react";
+import { useState } from "react";
 import { db } from "../utility/Firebase";
 import {
   doc,
-  // getDocs,
-  getDoc,
-  // query,
-  // collection,
-  // setDoc, updateDoc
+  onSnapshot,
   runTransaction,
+  Unsubscribe,
 } from "firebase/firestore";
 import { MemberType } from "../types/GroupType";
-
-export interface VotingContextType {
-  getVotes: (
-    userId: string,
-    groupId: string
-  ) => Promise<Pick<MemberType, "selectedMovies" | "votesReceived"> | null>;
-  voteForMovie: ({
-    userId,
-    votingUserId,
-    movieId,
-    groupId,
-  }: VoteParams) => Promise<void>;
-  unvoteForMovie: ({
-    userId,
-    votingUserId,
-    movieId,
-    groupId,
-  }: VoteParams) => Promise<void>;
-}
 
 interface VoteParams {
   userId: string;
@@ -37,29 +15,28 @@ interface VoteParams {
   groupId: string;
 }
 
-export const VotingContext = createContext<VotingContextType | null>(null);
+const useVoting = () => {
+  const [votes, setVotes] = useState<Pick<
+    MemberType,
+    "selectedMovies" | "votesReceived"
+  > | null>(null);
 
-export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const getVotes = async (
-    userId: string,
-    groupId: string
-  ): Promise<Pick<MemberType, "selectedMovies" | "votesReceived"> | null> => {
-    try {
-      const userRef = doc(db, "groups", groupId, "members", userId);
-      const userSnap = await getDoc(userRef);
+  const [unsubscribe, setUnsubscribe] = useState<Unsubscribe | null>(null);
 
-      const userData = userSnap.data();
-      return {
-        selectedMovies: userData?.selectedMovies,
-        votesReceived: userData?.votesReceived,
-      };
-    } catch (error) {
-      console.log(error);
-      // throw new Error("Error getting votes");
-      return null;
-    }
+  const subscribeToVotes = (userId: string, groupId: string): void => {
+    if (unsubscribe) unsubscribe();
+
+    const memberRef = doc(db, `groups/${groupId}/members`, userId);
+    const newUnsubscribe = onSnapshot(memberRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setVotes({
+          selectedMovies: snapshot.data().selectedMovies,
+          votesReceived: snapshot.data().votesReceived,
+        });
+        console.log("Votes:", votes);
+      } else setVotes(null);
+    });
+    setUnsubscribe(() => newUnsubscribe);
   };
 
   const voteForMovie = async ({
@@ -195,12 +172,7 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({
       // Edit later
     }
   };
-
-  // Select movie method
-
-  return (
-    <VotingContext.Provider value={{ getVotes, voteForMovie, unvoteForMovie }}>
-      {children}
-    </VotingContext.Provider>
-  );
+  return { votes, subscribeToVotes, voteForMovie, unvoteForMovie };
 };
+
+export default useVoting;

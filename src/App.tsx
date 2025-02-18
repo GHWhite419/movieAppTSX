@@ -12,7 +12,6 @@ import JoinGroup from "./components/groups/JoinGroup.tsx";
 
 import { MovieProvider } from "./context/MovieContext.tsx";
 import { GroupProvider } from "./context/GroupContext.tsx";
-import { VotingProvider } from "./context/VotingContext.tsx";
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./utility/ProtectedRoute.tsx";
 
@@ -72,22 +71,18 @@ function App() {
             <Route
               path="/groups/:groupId"
               element={
-                <VotingProvider>
-                  <ProtectedRoute>
-                    <GroupPage />
-                  </ProtectedRoute>
-                </VotingProvider>
+                <ProtectedRoute>
+                  <GroupPage />
+                </ProtectedRoute>
               }
             />
 
             <Route
               path="/groups/:groupId/members/:memberId"
               element={
-                <VotingProvider>
-                  <ProtectedRoute>
-                    <MemberPage />
-                  </ProtectedRoute>
-                </VotingProvider>
+                <ProtectedRoute>
+                  <MemberPage />
+                </ProtectedRoute>
               }
             />
           </Routes>

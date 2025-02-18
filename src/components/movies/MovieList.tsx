@@ -3,7 +3,7 @@ import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { MovieContext, MovieContextType } from "../../context/MovieContext";
 import { Link } from "react-router-dom";
-import { VotingContext } from "../../context/VotingContext";
+import useVoting from "../../hooks/useVoting";
 import { MemberType } from "../../types/GroupType";
 
 interface MovieListProps {
@@ -19,29 +19,10 @@ function MovieList(props: MovieListProps) {
   const { getMovieList } = useContext(MovieContext) as MovieContextType;
   // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
 
-  const votingContext = useContext(VotingContext);
-  // I call the VotingContext methods differently here because HomePage uses this component without the context. This way we don't return null to HomePage, and ensure content actually renders.
-  const getVotes =
-    votingContext?.getVotes ??
-    (() => {
-      console.warn("getVotes called without VotingContext");
-    });
-  const voteForMovie =
-    votingContext?.voteForMovie ??
-    (() => {
-      console.warn("voteForMovie called without VotingContext");
-    });
-  const unvoteForMovie =
-    votingContext?.unvoteForMovie ??
-    (() => {
-      console.warn("unvoteForMovie called without VotingContext");
-    });
+  const { votes, subscribeToVotes, voteForMovie, unvoteForMovie } = useVoting();
 
   const [movies, setMovies] = useState<MovieType[]>([]);
-  const [votes, setVotes] = useState<Pick<
-    MemberType,
-    "selectedMovies" | "votesReceived"
-  > | null>(null);
+
   const [voteStatus, setVoteStatus] = useState<{
     leadingMovies: string[];
     leadingVotes: number;
@@ -55,6 +36,12 @@ function MovieList(props: MovieListProps) {
   });
 
   useEffect(() => {
+    if (props.context === "group" && props.userId && props.groupId) {
+      subscribeToVotes(props.userId, props.groupId);
+    }
+  }, [props.userId, props.groupId]);
+
+  useEffect(() => {
     const fetchMovies = async () => {
       if (props.userId) {
         const movieList = await getMovieList(props.userId);
@@ -62,14 +49,7 @@ function MovieList(props: MovieListProps) {
       }
     };
     fetchMovies();
-    if (props.context === "group" && props.userId && props.groupId)
-      fetchVotes(props.userId, props.groupId);
-  }, []);
-
-  const fetchVotes = async (userId: string, groupId: string) => {
-    const votingData = await getVotes(userId, groupId);
-    if (votingData) setVotes(votingData);
-  };
+  }, [props.userId]);
 
   const handleCheckboxChange = async (
     userId: string,
@@ -95,7 +75,6 @@ function MovieList(props: MovieListProps) {
           groupId: props.groupId,
         });
       }
-      await fetchVotes(props.userId, props.groupId);
     } catch (error) {
       console.log(error);
       throw new Error("Unknown Error voting");
