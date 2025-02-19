@@ -19,21 +19,18 @@ function MovieList(props: MovieListProps) {
   const { getMovieList } = useContext(MovieContext) as MovieContextType;
   // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
 
-  const { votes, subscribeToVotes, voteForMovie, unvoteForMovie } = useVoting();
+  const {
+    votes,
+    subscribeToVotes,
+    voteForMovie,
+    unvoteForMovie,
+    movieVotesReceived,
+    userVotesCast,
+    isTieBreakNeeded,
+    calculateVoteStatus,
+  } = useVoting();
 
   const [movies, setMovies] = useState<MovieType[]>([]);
-
-  const [voteStatus, setVoteStatus] = useState<{
-    leadingMovies: string[];
-    leadingVotes: number;
-    runnerUpVotes: number;
-    remainingVotes: number;
-  }>({
-    leadingMovies: [],
-    leadingVotes: 0,
-    runnerUpVotes: 0,
-    remainingVotes: 0,
-  });
 
   useEffect(() => {
     if (props.context === "group" && props.userId && props.groupId) {
@@ -51,6 +48,11 @@ function MovieList(props: MovieListProps) {
     fetchMovies();
   }, [props.userId]);
 
+  useEffect(() => {
+    if (props.votesAllowed && props.groupMembers)
+      calculateVoteStatus(props.votesAllowed, props.groupMembers.length - 1);
+  }, [votes]);
+
   const handleCheckboxChange = async (
     userId: string,
     movieId: string,
@@ -62,15 +64,15 @@ function MovieList(props: MovieListProps) {
       }
       if (e.target.checked) {
         await voteForMovie({
-          userId: userId,
-          votingUserId: user.uid,
+          memberId: userId,
+          votingMemberId: user.uid,
           movieId: movieId,
           groupId: props.groupId,
         });
       } else {
         await unvoteForMovie({
-          userId: userId,
-          votingUserId: user.uid,
+          memberId: userId,
+          votingMemberId: user.uid,
           movieId: movieId,
           groupId: props.groupId,
         });
@@ -81,132 +83,6 @@ function MovieList(props: MovieListProps) {
       // Modify this message later perhaps
     }
   };
-
-  const userVotesCast: number | undefined = votes?.votesReceived?.find(
-    (targetUser) => targetUser.votingMember === user?.uid
-  )?.votesCast;
-
-  const movieVotesReceived = (movieId: string): number => {
-    const targetMovieVotes = votes?.selectedMovies.find(
-      (targetMovie) => targetMovie.movieId === movieId
-    )?.totalVotes;
-    if (targetMovieVotes) return targetMovieVotes;
-    return 0;
-  };
-
-  // Move this to VotingContext
-  const isTieBreakNeeded = (): boolean => {
-    if (
-      props.context !== "group" ||
-      !votes?.votesReceived ||
-      !props.votesAllowed ||
-      !props.groupMembers
-    )
-      return false;
-
-    const votesReceived = votes.votesReceived;
-    const votesAllowed = props.votesAllowed;
-
-    if (voteStatus.leadingMovies.length < 2) return false;
-
-    if (props.groupMembers.length - 1 === votes.votesReceived.length) {
-      const allVotesCast = votesReceived.every(
-        (member) => member.votesCast >= votesAllowed
-      );
-      if (allVotesCast) return true;
-    }
-
-    return (
-      voteStatus.runnerUpVotes + voteStatus.remainingVotes <
-      voteStatus.leadingVotes
-    );
-  };
-
-  // Move this to VotingContext
-  const isVotingDecided = (): boolean => {
-    if (props.context === "group" && props.groupMembers && props.votesAllowed) {
-      if (voteStatus.leadingMovies.length === 0) return false;
-
-      const groupMembers = props.groupMembers;
-      const votesAllowed = props.votesAllowed;
-
-      if (groupMembers.length - 1 === votes?.votesReceived.length) {
-        const allVotesCast = votes?.votesReceived.every(
-          (member) => member.votesCast >= votesAllowed
-        );
-        if (allVotesCast && voteStatus.leadingMovies.length === 1) return true;
-      }
-
-      return (
-        voteStatus.leadingMovies.length === 1 &&
-        voteStatus.leadingVotes >
-          voteStatus.runnerUpVotes + voteStatus.remainingVotes
-      );
-    }
-    return false;
-  };
-
-  useEffect(() => {
-    // Move most of this logic to VotingContext
-    if (
-      !votes?.selectedMovies ||
-      !votes?.votesReceived ||
-      !props.votesAllowed
-    ) {
-      setVoteStatus({
-        leadingMovies: [],
-        leadingVotes: 0,
-        runnerUpVotes: 0,
-        remainingVotes: 0,
-      });
-    } else {
-      const voteCounts: Record<string, number> = {};
-      for (let movie of votes?.selectedMovies) {
-        voteCounts[movie.movieId] = movie.totalVotes || 0;
-      }
-
-      const sortedMovies = Object.entries(voteCounts).sort(
-        (a, b) => b[1] - a[1]
-      );
-
-      if (sortedMovies.length === 0) {
-        setVoteStatus({
-          leadingMovies: [],
-          leadingVotes: 0,
-          runnerUpVotes: 0,
-          remainingVotes: 0,
-        });
-        return;
-      }
-
-      const leadVotes = sortedMovies[0][1];
-      const leadingMoviesList = sortedMovies
-        .filter(([_, votes]) => votes === leadVotes)
-        .map(([movieId]) => movieId);
-
-      const highestVotes = sortedMovies[0][1];
-
-      const nextHighestVotes =
-        sortedMovies.length > leadingMoviesList.length
-          ? sortedMovies[leadingMoviesList.length][1]
-          : 0;
-
-      let totalRemainingVotes = 0;
-      for (let member of votes.votesReceived) {
-        totalRemainingVotes += props.votesAllowed - member.votesCast;
-      }
-
-      setVoteStatus({
-        leadingMovies: leadingMoviesList,
-        leadingVotes: highestVotes,
-        runnerUpVotes: nextHighestVotes,
-        remainingVotes: totalRemainingVotes,
-      });
-      if (isVotingDecided())
-        console.log("Movie selected with ID:", voteStatus.leadingMovies[0]);
-      // Create "selectMovie" method and call it here.
-    }
-  }, [votes]);
 
   return (
     <>
@@ -265,7 +141,12 @@ function MovieList(props: MovieListProps) {
             {props.context === "group" &&
             user?.uid === props.userId &&
             movieVotesReceived(movie.id) >= 1 &&
-            isTieBreakNeeded() ? (
+            props.votesAllowed &&
+            props.groupMembers &&
+            isTieBreakNeeded(
+              props.votesAllowed,
+              props.groupMembers.length - 1
+            ) ? (
               // All votes should be in.
               <>
                 <input
