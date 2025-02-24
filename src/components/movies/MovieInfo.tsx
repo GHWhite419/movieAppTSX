@@ -41,7 +41,7 @@ function MovieInfo() {
   useEffect(() => {
     if (status === "redirecting") {
       const timer = setTimeout(() => {
-        navigate("/home");
+        navigate(-1);
       }, 2000);
       return () => clearTimeout(timer);
     } else if (status === "deleteError") {
@@ -74,7 +74,11 @@ function MovieInfo() {
     if (isMovieDeleted === true)
       return <p>Movie deleted. Redirecting to your list...</p>;
     else {
-      return <p>Movie not found, please try again later. Redirecting to your list...</p>;
+      return (
+        <p>
+          Movie not found, please try again later. Redirecting to your list...
+        </p>
+      );
     }
   }
 
@@ -107,7 +111,8 @@ function MovieInfo() {
       <p>Directed by: {movie.director}</p>
       <p>Starring: {movie.starring}</p>
       <p>Description: {movie.description}</p>
-      <Link to="/home">Back</Link>
+      {/* <Link to="/">Back</Link> */}
+      <button onClick={() => navigate(-1)}>Back</button>
       <Link to="editmovie">Edit</Link>
       <button type="button" onClick={() => toggleDeleteModal()}>
         Delete

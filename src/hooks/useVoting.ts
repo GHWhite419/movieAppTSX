@@ -15,14 +15,13 @@ interface VoteParams {
   movieId: string;
   groupId: string;
 }
-
-const { user } = useContext(AuthContext);
-
 const useVoting = () => {
   const [votes, setVotes] = useState<Pick<
     MemberType,
     "selectedMovies" | "votesReceived"
   > | null>(null);
+
+  const { user } = useContext(AuthContext);
 
   const [unsubscribe, setUnsubscribe] = useState<Unsubscribe | null>(null);
 
