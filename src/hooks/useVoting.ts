@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import { MemberType } from "../types/GroupType";
 import { AuthContext } from "../context/AuthContext";
+import MovieType from "../types/MovieType";
 
 interface VoteParams {
   memberId: string;
@@ -15,13 +16,14 @@ interface VoteParams {
   movieId: string;
   groupId: string;
 }
+
 const useVoting = () => {
+  const { user } = useContext(AuthContext);
+
   const [votes, setVotes] = useState<Pick<
     MemberType,
     "selectedMovies" | "votesReceived"
   > | null>(null);
-
-  const { user } = useContext(AuthContext);
 
   const [unsubscribe, setUnsubscribe] = useState<Unsubscribe | null>(null);
 
@@ -37,16 +39,28 @@ const useVoting = () => {
     remainingVotes: 0,
   });
 
-  const subscribeToVotes = (memberId: string, groupId: string): void => {
+  //   selectedMovie state?
+//   const [selectedMovie, setSelectedMovie] = useState<MovieType | null>(null);
+
+  const subscribeToVotes = (
+    memberId: string,
+    groupId: string,
+    votesAllowed: number,
+    totalVoters: number
+  ): void => {
     if (unsubscribe) unsubscribe();
 
     const memberRef = doc(db, `groups/${groupId}/members`, memberId);
     const newUnsubscribe = onSnapshot(memberRef, (snapshot) => {
       if (snapshot.exists()) {
-        setVotes({
+        const updatedVotes = {
           selectedMovies: snapshot.data().selectedMovies,
           votesReceived: snapshot.data().votesReceived,
-        });
+        };
+
+        setVotes(updatedVotes);
+
+        calculateVoteStatus(votesAllowed, totalVoters, updatedVotes);
       } else setVotes(null);
     });
     setUnsubscribe(() => newUnsubscribe);
@@ -224,13 +238,17 @@ const useVoting = () => {
     votesAllowed: number,
     totalVoters: number
   ): boolean => {
-    if (voteStatus.leadingMovies.length === 0) return false;
+    if (voteStatus.leadingMovies.length !== 1) {
+      return false;
+    }
 
     if (totalVoters === votes?.votesReceived.length) {
       const allVotesCast = votes?.votesReceived.every(
         (member) => member.votesCast >= votesAllowed
       );
-      if (allVotesCast && voteStatus.leadingMovies.length === 1) return true;
+      if (allVotesCast && voteStatus.leadingMovies.length === 1) {
+        return true;
+      }
     }
 
     return (
@@ -240,8 +258,13 @@ const useVoting = () => {
     );
   };
 
-  const calculateVoteStatus = (votesAllowed: number, totalVoters: number) => {
-    if (!votes?.selectedMovies || !votes?.votesReceived) {
+  const calculateVoteStatus = (
+    votesAllowed: number,
+    totalVoters: number,
+    updatedVotes: Pick<MemberType, "selectedMovies" | "votesReceived">
+    // Need a better
+  ) => {
+    if (!updatedVotes) {
       setVoteStatus({
         leadingMovies: [],
         leadingVotes: 0,
@@ -250,7 +273,7 @@ const useVoting = () => {
       });
     } else {
       const voteCounts: Record<string, number> = {};
-      for (let movie of votes?.selectedMovies) {
+      for (let movie of updatedVotes.selectedMovies) {
         voteCounts[movie.movieId] = movie.totalVotes || 0;
       }
 
@@ -281,7 +304,7 @@ const useVoting = () => {
           : 0;
 
       let totalRemainingVotes = 0;
-      for (let member of votes.votesReceived) {
+      for (let member of updatedVotes.votesReceived) {
         totalRemainingVotes += votesAllowed - member.votesCast;
       }
 
@@ -291,11 +314,14 @@ const useVoting = () => {
         runnerUpVotes: nextHighestVotes,
         remainingVotes: totalRemainingVotes,
       });
-      if (isVotingDecided(votesAllowed, totalVoters))
-        console.log("Movie selected with ID:", voteStatus.leadingMovies[0]);
-      // Create "selectMovie" method and call it here.
+        if (isVotingDecided(votesAllowed, totalVoters))
+          selectWinningMovie(voteStatus.leadingMovies[0]);
     }
   };
+
+    const selectWinningMovie = (movieId: string) => {
+  console.log("Winner! Movie selected with id:", movieId);
+    };
 
   return {
     votes,
@@ -309,6 +335,7 @@ const useVoting = () => {
     isTieBreakNeeded,
     isVotingDecided,
     calculateVoteStatus,
+    // selectWinningMovie,
   };
 };
 

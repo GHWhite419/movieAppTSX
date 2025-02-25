@@ -27,14 +27,25 @@ function MovieList(props: MovieListProps) {
     movieVotesReceived,
     userVotesCast,
     isTieBreakNeeded,
-    calculateVoteStatus,
+    isVotingDecided,
   } = useVoting();
 
   const [movies, setMovies] = useState<MovieType[]>([]);
 
   useEffect(() => {
-    if (props.context === "group" && props.userId && props.groupId) {
-      subscribeToVotes(props.userId, props.groupId);
+    if (
+      props.context === "group" &&
+      props.userId &&
+      props.groupId &&
+      props.votesAllowed &&
+      props.groupMembers
+    ) {
+      subscribeToVotes(
+        props.userId,
+        props.groupId,
+        props.votesAllowed,
+        props.groupMembers.length - 1
+      );
     }
   }, [props.userId, props.groupId]);
 
@@ -48,10 +59,10 @@ function MovieList(props: MovieListProps) {
     fetchMovies();
   }, [props.userId]);
 
-  useEffect(() => {
-    if (props.votesAllowed && props.groupMembers)
-      calculateVoteStatus(props.votesAllowed, props.groupMembers.length - 1);
-  }, [votes]);
+  // useEffect(() => {
+  //   if (props.votesAllowed && props.groupMembers)
+  //     calculateVoteStatus(props.votesAllowed, props.groupMembers.length - 1);
+  // }, [votes]);
 
   const handleCheckboxChange = async (
     userId: string,
@@ -162,6 +173,15 @@ function MovieList(props: MovieListProps) {
                 has {movieVotesReceived(movie.id)}{" "}
                 {movieVotesReceived(movie.id) === 1 ? "vote" : "votes"}
               </p>
+            ) : null}
+            {props.votesAllowed &&
+            props.groupMembers &&
+            isVotingDecided(
+              props.votesAllowed,
+              props.groupMembers.length - 1
+            ) &&
+            votes?.selectedMovies[0].movieId === movie.id ? (
+              <h2>{movie.title} has been selected!</h2>
             ) : null}
           </li>
           // Think about what info I want to display in each li. Right now it's title but I'll display:
