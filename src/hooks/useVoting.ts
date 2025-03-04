@@ -1,18 +1,22 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useRef } from "react";
 import { db } from "../utility/Firebase";
 import {
   doc,
   onSnapshot,
+  collection,
+  getDoc,
+  getDocs,
+  updateDoc,
   runTransaction,
   Unsubscribe,
 } from "firebase/firestore";
 import { MemberType } from "../types/GroupType";
 import { AuthContext } from "../context/AuthContext";
-import MovieType from "../types/MovieType";
+// import MovieType from "../types/MovieType";
 
 interface VoteParams {
   memberId: string;
-  votingMemberId: string;
+  voterId: string;
   movieId: string;
   groupId: string;
 }
@@ -20,14 +24,20 @@ interface VoteParams {
 const useVoting = () => {
   const { user } = useContext(AuthContext);
 
+  const [unsubscribe, setUnsubscribe] = useState<{
+    groupUnsubscribe: Unsubscribe | null;
+    memberUnsubscribe: Unsubscribe | null;
+  }>({
+    groupUnsubscribe: null,
+    memberUnsubscribe: null,
+  });
+
   const [votes, setVotes] = useState<Pick<
     MemberType,
     "selectedMovies" | "votesReceived"
   > | null>(null);
 
-  const [unsubscribe, setUnsubscribe] = useState<Unsubscribe | null>(null);
-
-  const [voteStatus, setVoteStatus] = useState<{
+  const [voteResults, setVoteResults] = useState<{
     leadingMovies: string[];
     leadingVotes: number;
     runnerUpVotes: number;
@@ -39,36 +49,80 @@ const useVoting = () => {
     remainingVotes: 0,
   });
 
-  //   selectedMovie state?
-//   const [selectedMovie, setSelectedMovie] = useState<MovieType | null>(null);
+  const [voteConfig, setVoteConfig] = useState<{
+    memberId: string;
+    groupId: string;
+    votesAllowed: number;
+    totalVoters: number;
+  }>({
+    memberId: "",
+    groupId: "",
+    votesAllowed: 0,
+    totalVoters: 0,
+  });
 
-  const subscribeToVotes = (
-    memberId: string,
-    groupId: string,
-    votesAllowed: number,
-    totalVoters: number
-  ): void => {
-    if (unsubscribe) unsubscribe();
+  const voteConfigRef = useRef(voteConfig)
 
-    const memberRef = doc(db, `groups/${groupId}/members`, memberId);
-    const newUnsubscribe = onSnapshot(memberRef, (snapshot) => {
+  //   const [selectedMovie, setSelectedMovie] = useState<MovieType | null>(null);
+
+  const subscribeToVotes = (memberId: string, groupId: string): void => {
+    if (!memberId || !groupId) {
+      console.error("Skipping subscribeToVotes due to missing values:", {
+        memberId,
+        groupId,
+      });
+      return;
+    }
+
+    unsubscribe.groupUnsubscribe?.();
+    unsubscribe.memberUnsubscribe?.();
+
+    const groupRef = doc(db, `groups/${groupId}`);
+    const groupUnsubscribe = onSnapshot(groupRef, (snapshot) => {
       if (snapshot.exists()) {
-        const updatedVotes = {
-          selectedMovies: snapshot.data().selectedMovies,
-          votesReceived: snapshot.data().votesReceived,
-        };
+        const updatedVotesAllowed = snapshot.data().options.votesAllowed;
+        let updatedTotalVoters: number;
 
-        setVotes(updatedVotes);
+        const membersRef = collection(db, `groups/${groupId}/members`);
+        getDocs(membersRef).then((membersSnapshot) => {
+          updatedTotalVoters = membersSnapshot.size - 1;
 
-        calculateVoteStatus(votesAllowed, totalVoters, updatedVotes);
-      } else setVotes(null);
+          setVoteConfig((prevState) => ({
+            ...prevState,
+            votesAlowed: updatedVotesAllowed,
+            totalVoters: updatedTotalVoters,
+          }));
+        });
+
+        const targetMemberRef = doc(db, `groups/${groupId}/members`, memberId);
+        const memberUnsubscribe = onSnapshot(targetMemberRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const updatedVotes = {
+              selectedMovies: snapshot.data().selectedMovies,
+              votesReceived: snapshot.data().votesReceived,
+            };
+
+            setVotes(updatedVotes);
+
+            calculateVoteStatus(
+              updatedVotesAllowed,
+              updatedTotalVoters,
+              updatedVotes
+            );
+          } else setVotes(null);
+        });
+        setUnsubscribe({
+          groupUnsubscribe,
+          memberUnsubscribe,
+        });
+      }
     });
-    setUnsubscribe(() => newUnsubscribe);
+    console.log("Vote Listener is active");
   };
 
   const voteForMovie = async ({
     memberId,
-    votingMemberId,
+    voterId,
     movieId,
     groupId,
   }: VoteParams) => {
@@ -102,22 +156,21 @@ const useVoting = () => {
           selectedMovies.push({
             movieId: movieId,
             totalVotes: 1,
-            votedBy: [votingMemberId],
+            votedBy: [voterId],
           });
-        } else if (!targetMovie.votedBy.includes(votingMemberId)) {
+        } else if (!targetMovie.votedBy.includes(voterId)) {
           targetMovie.totalVotes += 1;
-          targetMovie.votedBy.push(votingMemberId);
+          targetMovie.votedBy.push(voterId);
         } else {
           throw new Error("User has already voted for this movie.");
         }
 
         const userVote = votesReceived.find(
-          (v: MemberType["votesReceived"][number]) =>
-            v.votingMember === votingMemberId
+          (v: MemberType["votesReceived"][number]) => v.votingMember === voterId
         );
 
         if (!userVote) {
-          votesReceived.push({ votingMember: votingMemberId, votesCast: 1 });
+          votesReceived.push({ votingMember: voterId, votesCast: 1 });
         } else if (userVote.votesCast < votesAllowed) {
           userVote.votesCast += 1;
         } else {
@@ -139,7 +192,7 @@ const useVoting = () => {
 
   const unvoteForMovie = async ({
     memberId,
-    votingMemberId,
+    voterId,
     movieId,
     groupId,
   }: VoteParams) => {
@@ -165,7 +218,7 @@ const useVoting = () => {
 
         targetMovie.totalVotes -= 1;
         targetMovie.votedBy = targetMovie.votedBy.filter(
-          (targetMemberId: string) => targetMemberId !== votingMemberId
+          (targetMemberId: string) => targetMemberId !== voterId
         );
 
         if (targetMovie.totalVotes === 0) {
@@ -173,8 +226,7 @@ const useVoting = () => {
         }
 
         const userVoteIndex = votesReceived.findIndex(
-          (v: MemberType["votesReceived"][number]) =>
-            v.votingMember === votingMemberId
+          (v: MemberType["votesReceived"][number]) => v.votingMember === voterId
         );
 
         if (userVoteIndex === -1) {
@@ -219,7 +271,7 @@ const useVoting = () => {
 
     const votesReceived = votes.votesReceived;
 
-    if (voteStatus.leadingMovies.length < 2) return false;
+    if (voteResults.leadingMovies.length < 2) return false;
 
     if (totalVoters === votes.votesReceived.length) {
       const allVotesCast = votesReceived.every(
@@ -229,8 +281,8 @@ const useVoting = () => {
     }
 
     return (
-      voteStatus.runnerUpVotes + voteStatus.remainingVotes <
-      voteStatus.leadingVotes
+      voteResults.runnerUpVotes + voteResults.remainingVotes <
+      voteResults.leadingVotes
     );
   };
 
@@ -238,7 +290,7 @@ const useVoting = () => {
     votesAllowed: number,
     totalVoters: number
   ): boolean => {
-    if (voteStatus.leadingMovies.length !== 1) {
+    if (voteResults.leadingMovies.length !== 1) {
       return false;
     }
 
@@ -246,15 +298,15 @@ const useVoting = () => {
       const allVotesCast = votes?.votesReceived.every(
         (member) => member.votesCast >= votesAllowed
       );
-      if (allVotesCast && voteStatus.leadingMovies.length === 1) {
+      if (allVotesCast && voteResults.leadingMovies.length === 1) {
         return true;
       }
     }
 
     return (
-      voteStatus.leadingMovies.length === 1 &&
-      voteStatus.leadingVotes >
-        voteStatus.runnerUpVotes + voteStatus.remainingVotes
+      voteResults.leadingMovies.length === 1 &&
+      voteResults.leadingVotes >
+        voteResults.runnerUpVotes + voteResults.remainingVotes
     );
   };
 
@@ -262,10 +314,9 @@ const useVoting = () => {
     votesAllowed: number,
     totalVoters: number,
     updatedVotes: Pick<MemberType, "selectedMovies" | "votesReceived">
-    // Need a better
   ) => {
     if (!updatedVotes) {
-      setVoteStatus({
+      setVoteResults({
         leadingMovies: [],
         leadingVotes: 0,
         runnerUpVotes: 0,
@@ -282,7 +333,7 @@ const useVoting = () => {
       );
 
       if (sortedMovies.length === 0) {
-        setVoteStatus({
+        setVoteResults({
           leadingMovies: [],
           leadingVotes: 0,
           runnerUpVotes: 0,
@@ -307,35 +358,96 @@ const useVoting = () => {
       for (let member of updatedVotes.votesReceived) {
         totalRemainingVotes += votesAllowed - member.votesCast;
       }
-
-      setVoteStatus({
+      console.log("Vote config:", voteConfig);
+      setVoteResults({
         leadingMovies: leadingMoviesList,
         leadingVotes: highestVotes,
         runnerUpVotes: nextHighestVotes,
         remainingVotes: totalRemainingVotes,
       });
-        if (isVotingDecided(votesAllowed, totalVoters))
-          selectWinningMovie(voteStatus.leadingMovies[0]);
+      if (isVotingDecided(votesAllowed, totalVoters))
+        selectWinningMovie(
+          voteConfig.memberId,
+          voteResults.leadingMovies[0],
+          voteConfig.groupId
+        );
+      else deselectWinningMovie(voteConfig.memberId, voteConfig.groupId);
     }
   };
 
-    const selectWinningMovie = (movieId: string) => {
-  console.log("Winner! Movie selected with id:", movieId);
-    };
+  const selectWinningMovie = async (
+    memberId: string,
+    movieId: string,
+    groupId: string
+  ) => {
+    const docRef = doc(db, `groups/${groupId}/members/${memberId}`);
+    try {
+      const docSnap = await getDoc(docRef);
+      const docData = docSnap.data();
+
+      if (docData) {
+        const updatedMovies = docData.selectedMovies.map(
+          (movie: {
+            movieId: string;
+            totalVotes: number;
+            votedBy: string[];
+            isSelectedMovie?: boolean;
+          }) =>
+            movie.movieId === movieId
+              ? { ...movie, isSelectedMovie: true }
+              : movie
+        );
+        await updateDoc(docRef, {
+          selectedMovies: updatedMovies,
+        });
+      }
+    } catch (error) {
+      console.log("Error confirming winning movie:", error);
+    }
+  };
+
+  const deselectWinningMovie = async (memberId: string, groupId: string) => {
+    const docRef = doc(db, `groups/${groupId}/members/${memberId}`);
+    try {
+      const docSnap = await getDoc(docRef);
+      const docData = docSnap.data();
+
+      if (docData) {
+        const updatedMovies = docData.selectedMovies.map(
+          (movie: {
+            movieId: string;
+            totalVotes: number;
+            votedBy: string[];
+            isSelectedMovie?: boolean;
+          }) => {
+            if (movie.isSelectedMovie) {
+              const { isSelectedMovie, ...rest } = movie;
+              return rest;
+            }
+            return movie;
+          }
+        );
+
+        await updateDoc(docRef, {
+          selectedMovies: updatedMovies,
+        });
+      }
+    } catch (error) {
+      console.log("Error deselecting winning movie:", error);
+    }
+  };
 
   return {
     votes,
-    voteStatus,
-    setVoteStatus,
+    voteConfigRef,
+    setVoteConfig,
     subscribeToVotes,
     voteForMovie,
     unvoteForMovie,
-    userVotesCast,
     movieVotesReceived,
+    userVotesCast,
     isTieBreakNeeded,
     isVotingDecided,
-    calculateVoteStatus,
-    // selectWinningMovie,
   };
 };
 

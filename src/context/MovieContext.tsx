@@ -99,7 +99,6 @@ export const MovieProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const docSnap = await getDoc(docRef);
       const movieData = docSnap.data() as MovieType;
-      // console.log("Document data:,", docSnap.data());
       // Type assertion here - change later.
       return {
         id: docSnap.id,

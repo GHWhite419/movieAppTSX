@@ -14,13 +14,21 @@ interface MovieListProps {
   groupMembers?: MemberType[];
 }
 
-function MovieList(props: MovieListProps) {
+function MovieList({
+  userId = "",
+  context,
+  groupId = "",
+  votesAllowed = 0,
+  groupMembers = [],
+}: MovieListProps) {
   const { user } = useContext(AuthContext);
   const { getMovieList } = useContext(MovieContext) as MovieContextType;
   // GPT recommended I null guard instead of type cast like this. I wonder what devs think is the best practice?
 
   const {
     votes,
+    setVoteConfig,
+    voteConfigRef,
     subscribeToVotes,
     voteForMovie,
     unvoteForMovie,
@@ -32,37 +40,44 @@ function MovieList(props: MovieListProps) {
 
   const [movies, setMovies] = useState<MovieType[]>([]);
 
-  useEffect(() => {
-    if (
-      props.context === "group" &&
-      props.userId &&
-      props.groupId &&
-      props.votesAllowed &&
-      props.groupMembers
-    ) {
-      subscribeToVotes(
-        props.userId,
-        props.groupId,
-        props.votesAllowed,
-        props.groupMembers.length - 1
-      );
-    }
-  }, [props.userId, props.groupId]);
+  const groupConditions = {
+    isGroupContext: context === "group",
+    hasUserId: !!userId,
+    hasGroupId: !!groupId,
+    hasVotesAllowed: !!votesAllowed,
+    hasGroupMembers: !!groupMembers,
+  };
+
+  const areGroupConditionsMet = () =>
+    Object.values(groupConditions).every(Boolean);
 
   useEffect(() => {
     const fetchMovies = async () => {
-      if (props.userId) {
-        const movieList = await getMovieList(props.userId);
+      if (userId) {
+        const movieList = await getMovieList(userId);
         setMovies(movieList);
       }
     };
     fetchMovies();
-  }, [props.userId]);
+  }, [userId]);
 
-  // useEffect(() => {
-  //   if (props.votesAllowed && props.groupMembers)
-  //     calculateVoteStatus(props.votesAllowed, props.groupMembers.length - 1);
-  // }, [votes]);
+  useEffect(() => {
+    if (areGroupConditionsMet()) {
+      const updatedVoteConfig = {
+        memberId: userId,
+        groupId: groupId,
+        votesAllowed: votesAllowed,
+        totalVoters: groupMembers.length - 1,
+      };
+
+      setVoteConfig(updatedVoteConfig);
+      voteConfigRef.current = updatedVoteConfig;
+    }
+  }, [userId, groupId]);
+
+  useEffect(() => {
+    subscribeToVotes(userId, groupId);
+  }, [voteConfigRef]);
 
   const handleCheckboxChange = async (
     userId: string,
@@ -70,22 +85,22 @@ function MovieList(props: MovieListProps) {
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     try {
-      if (!user || !props.groupId || !props.userId) {
+      if (!user || !groupId || !userId) {
         throw new Error("User or groupId is missing");
       }
       if (e.target.checked) {
         await voteForMovie({
           memberId: userId,
-          votingMemberId: user.uid,
+          voterId: user.uid,
           movieId: movieId,
-          groupId: props.groupId,
+          groupId: groupId,
         });
       } else {
         await unvoteForMovie({
           memberId: userId,
-          votingMemberId: user.uid,
+          voterId: user.uid,
           movieId: movieId,
-          groupId: props.groupId,
+          groupId: groupId,
         });
       }
     } catch (error) {
@@ -97,15 +112,13 @@ function MovieList(props: MovieListProps) {
 
   return (
     <>
-      {props.context === "group" && props.userId !== user?.uid ? (
+      {context === "group" && userId !== user?.uid ? (
         <h2>
           You have{" "}
-          {props.votesAllowed && userVotesCast
-            ? props.votesAllowed - userVotesCast
-            : props.votesAllowed}{" "}
-          {props.votesAllowed &&
-          userVotesCast &&
-          props.votesAllowed - userVotesCast === 1
+          {votesAllowed && userVotesCast
+            ? votesAllowed - userVotesCast
+            : votesAllowed}{" "}
+          {votesAllowed && userVotesCast && votesAllowed - userVotesCast === 1
             ? "vote"
             : "votes"}{" "}
           to cast.{" "}
@@ -116,12 +129,12 @@ function MovieList(props: MovieListProps) {
         {movies?.map((movie: MovieType) => (
           <li key={movie.id}>
             <Link to={`/movies/${movie.id}`}>{movie.title}</Link>
-            {props.userId && props.userId !== user?.uid ? (
+            {userId && userId !== user?.uid ? (
               <>
                 <input
                   type="checkbox"
-                  id={`vote-${movie.id}-${props.userId}`}
-                  name={`vote-${movie.id}-${props.userId}`}
+                  id={`vote-${movie.id}-${userId}`}
+                  name={`vote-${movie.id}-${userId}`}
                   checked={
                     votes?.selectedMovies
                       ?.find((targetMovie) => targetMovie.movieId === movie.id)
@@ -131,55 +144,42 @@ function MovieList(props: MovieListProps) {
                     (!votes?.selectedMovies
                       ?.find((targetMovie) => targetMovie.movieId === movie.id)
                       ?.votedBy.includes(user?.uid ?? "") &&
-                      userVotesCast === props.votesAllowed) ??
+                      userVotesCast === votesAllowed) ??
                     false
                   }
                   onChange={(e) =>
-                    handleCheckboxChange(
-                      props.userId ?? "undefined",
-                      movie.id,
-                      e
-                    )
+                    handleCheckboxChange(userId ?? "undefined", movie.id, e)
                   }
                 />
-                <label htmlFor={`vote-${movie.id}-${props.userId}`}>
+                <label htmlFor={`vote-${movie.id}-${userId}`}>
                   {/* Vote for this movie */}
                   {/* Need to think about how this text will appear. */}
                   {/* Perhaps a hover tooltip; at minimum, an sr-only label */}
                 </label>
               </>
             ) : null}
-            {props.context === "group" &&
-            user?.uid === props.userId &&
+            {areGroupConditionsMet() &&
+            user?.uid === userId &&
             movieVotesReceived(movie.id) >= 1 &&
-            props.votesAllowed &&
-            props.groupMembers &&
-            isTieBreakNeeded(
-              props.votesAllowed,
-              props.groupMembers.length - 1
-            ) ? (
+            isTieBreakNeeded(votesAllowed, groupMembers.length - 1) ? (
               // All votes should be in.
               <>
                 <input
                   type="checkbox"
-                  id={`tiebreak-${movie.id}-${props.userId}`}
-                  name={`tiebreak-${movie.id}-${props.userId}`}
+                  id={`tiebreak-${movie.id}-${userId}`}
+                  name={`tiebreak-${movie.id}-${userId}`}
                 />
                 <label htmlFor=""></label>
               </>
             ) : null}
-            {props.context === "group" && movieVotesReceived(movie.id) ? (
+            {context === "group" && movieVotesReceived(movie.id) ? (
               <p>
                 has {movieVotesReceived(movie.id)}{" "}
                 {movieVotesReceived(movie.id) === 1 ? "vote" : "votes"}
               </p>
             ) : null}
-            {props.votesAllowed &&
-            props.groupMembers &&
-            isVotingDecided(
-              props.votesAllowed,
-              props.groupMembers.length - 1
-            ) &&
+            {areGroupConditionsMet() &&
+            isVotingDecided(votesAllowed, groupMembers.length - 1) &&
             votes?.selectedMovies[0].movieId === movie.id ? (
               <h2>{movie.title} has been selected!</h2>
             ) : null}
