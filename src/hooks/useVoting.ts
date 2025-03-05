@@ -1,4 +1,4 @@
-import { useState, useContext, useRef } from "react";
+import { useState, useContext, useEffect } from "react";
 import { db } from "../utility/Firebase";
 import {
   doc,
@@ -61,12 +61,40 @@ const useVoting = () => {
     totalVoters: 0,
   });
 
-  const voteConfigRef = useRef(voteConfig)
+  const [selectedMovie, setSelectedMovie] = useState<string>("");
 
-  //   const [selectedMovie, setSelectedMovie] = useState<MovieType | null>(null);
+  // const prevWinningMovie = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!voteResults.leadingMovies.length) return;
+
+    // const newWinningMovie = voteResults.leadingMovies[0];
+
+    console.log("Checking for voting decision...");
+    console.log(
+      "Is voting decided?",
+      isVotingDecided(voteConfig.votesAllowed, voteConfig.totalVoters)
+    );
+    console.log("Selected movie:", selectedMovie);
+    if (
+      isVotingDecided(voteConfig.votesAllowed, voteConfig.totalVoters) &&
+      !selectedMovie
+      // &&      newWinningMovie !== prevWinningMovie.current
+    ) {
+      selectWinningMovie(
+        voteConfig.memberId,
+        voteResults.leadingMovies[0],
+        voteConfig.groupId
+      );
+      // prevWinningMovie.current = newWinningMovie;
+    } else if (selectedMovie) {
+      console.log("Deselecting winning movie...");
+      deselectWinningMovie(voteConfig.memberId, voteConfig.groupId);
+    } else console.log("No changes to make.");
+  }, [voteResults.leadingMovies, selectedMovie]);
 
   const subscribeToVotes = (memberId: string, groupId: string): void => {
-    if (!memberId || !groupId) {
+    if (!voteConfig.memberId || !voteConfig.groupId) {
       console.error("Skipping subscribeToVotes due to missing values:", {
         memberId,
         groupId,
@@ -104,11 +132,8 @@ const useVoting = () => {
 
             setVotes(updatedVotes);
 
-            calculateVoteStatus(
-              updatedVotesAllowed,
-              updatedTotalVoters,
-              updatedVotes
-            );
+            console.log("Calculating vote status...");
+            calculateVoteStatus(updatedVotesAllowed, updatedVotes);
           } else setVotes(null);
         });
         setUnsubscribe({
@@ -117,7 +142,6 @@ const useVoting = () => {
         });
       }
     });
-    console.log("Vote Listener is active");
   };
 
   const voteForMovie = async ({
@@ -312,7 +336,6 @@ const useVoting = () => {
 
   const calculateVoteStatus = (
     votesAllowed: number,
-    totalVoters: number,
     updatedVotes: Pick<MemberType, "selectedMovies" | "votesReceived">
   ) => {
     if (!updatedVotes) {
@@ -358,20 +381,12 @@ const useVoting = () => {
       for (let member of updatedVotes.votesReceived) {
         totalRemainingVotes += votesAllowed - member.votesCast;
       }
-      console.log("Vote config:", voteConfig);
       setVoteResults({
         leadingMovies: leadingMoviesList,
         leadingVotes: highestVotes,
         runnerUpVotes: nextHighestVotes,
         remainingVotes: totalRemainingVotes,
       });
-      if (isVotingDecided(votesAllowed, totalVoters))
-        selectWinningMovie(
-          voteConfig.memberId,
-          voteResults.leadingMovies[0],
-          voteConfig.groupId
-        );
-      else deselectWinningMovie(voteConfig.memberId, voteConfig.groupId);
     }
   };
 
@@ -386,6 +401,13 @@ const useVoting = () => {
       const docData = docSnap.data();
 
       if (docData) {
+        const isAlreadySelected = docData.selectedMovies.some(
+          (movie: { movieId: string; isSelectedMovie?: boolean }) =>
+            movie.movieId === movieId && movie.isSelectedMovie
+        );
+
+        if (isAlreadySelected) return;
+
         const updatedMovies = docData.selectedMovies.map(
           (movie: {
             movieId: string;
@@ -397,9 +419,13 @@ const useVoting = () => {
               ? { ...movie, isSelectedMovie: true }
               : movie
         );
+
+        setSelectedMovie(movieId);
+
         await updateDoc(docRef, {
           selectedMovies: updatedMovies,
         });
+        console.log("Movie successfully selected.");
       }
     } catch (error) {
       console.log("Error confirming winning movie:", error);
@@ -407,6 +433,9 @@ const useVoting = () => {
   };
 
   const deselectWinningMovie = async (memberId: string, groupId: string) => {
+    if (!memberId || !groupId) {
+      console.error("Skipping deselectWinningMovie due to missing values:");
+    }
     const docRef = doc(db, `groups/${groupId}/members/${memberId}`);
     try {
       const docSnap = await getDoc(docRef);
@@ -428,6 +457,8 @@ const useVoting = () => {
           }
         );
 
+        setSelectedMovie("");
+
         await updateDoc(docRef, {
           selectedMovies: updatedMovies,
         });
@@ -439,7 +470,7 @@ const useVoting = () => {
 
   return {
     votes,
-    voteConfigRef,
+    voteConfig,
     setVoteConfig,
     subscribeToVotes,
     voteForMovie,

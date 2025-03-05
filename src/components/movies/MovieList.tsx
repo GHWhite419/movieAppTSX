@@ -28,7 +28,6 @@ function MovieList({
   const {
     votes,
     setVoteConfig,
-    voteConfigRef,
     subscribeToVotes,
     voteForMovie,
     unvoteForMovie,
@@ -39,6 +38,8 @@ function MovieList({
   } = useVoting();
 
   const [movies, setMovies] = useState<MovieType[]>([]);
+
+  const [isReadyToSubscribe, setIsReadyToSubscribe] = useState<boolean>(false);
 
   const groupConditions = {
     isGroupContext: context === "group",
@@ -69,15 +70,16 @@ function MovieList({
         votesAllowed: votesAllowed,
         totalVoters: groupMembers.length - 1,
       };
-
       setVoteConfig(updatedVoteConfig);
-      voteConfigRef.current = updatedVoteConfig;
+      setIsReadyToSubscribe(true);
     }
   }, [userId, groupId]);
 
   useEffect(() => {
-    subscribeToVotes(userId, groupId);
-  }, [voteConfigRef]);
+    if (isReadyToSubscribe) {
+      subscribeToVotes(userId, groupId);
+    }
+  }, [isReadyToSubscribe]);
 
   const handleCheckboxChange = async (
     userId: string,
