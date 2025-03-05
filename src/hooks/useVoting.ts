@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import { db } from "../utility/Firebase";
 import {
   doc,
@@ -12,7 +12,6 @@ import {
 } from "firebase/firestore";
 import { MemberType } from "../types/GroupType";
 import { AuthContext } from "../context/AuthContext";
-// import MovieType from "../types/MovieType";
 
 interface VoteParams {
   memberId: string;
@@ -63,35 +62,42 @@ const useVoting = () => {
 
   const [selectedMovie, setSelectedMovie] = useState<string>("");
 
-  // const prevWinningMovie = useRef<string | null>(null);
+  const prevSelectedMovieRef = useRef<string>("");
 
   useEffect(() => {
     if (!voteResults.leadingMovies.length) return;
 
-    // const newWinningMovie = voteResults.leadingMovies[0];
+    console.log("Checking for voting status changes...");
 
-    console.log("Checking for voting decision...");
-    console.log(
-      "Is voting decided?",
-      isVotingDecided(voteConfig.votesAllowed, voteConfig.totalVoters)
-    );
-    console.log("Selected movie:", selectedMovie);
+    const prevSelectedMovie = prevSelectedMovieRef.current;
+
     if (
       isVotingDecided(voteConfig.votesAllowed, voteConfig.totalVoters) &&
       !selectedMovie
-      // &&      newWinningMovie !== prevWinningMovie.current
     ) {
+      console.log("Selecting winning movie...");
+      const winningMovie = voteResults.leadingMovies[0];
       selectWinningMovie(
         voteConfig.memberId,
         voteResults.leadingMovies[0],
         voteConfig.groupId
-      );
-      // prevWinningMovie.current = newWinningMovie;
-    } else if (selectedMovie) {
+      ).then(() => {
+        setSelectedMovie(winningMovie);
+        prevSelectedMovieRef.current = winningMovie;
+      });
+    } else if (
+      !isVotingDecided(voteConfig.votesAllowed, voteConfig.totalVoters) &&
+      selectedMovie
+    ) {
       console.log("Deselecting winning movie...");
-      deselectWinningMovie(voteConfig.memberId, voteConfig.groupId);
-    } else console.log("No changes to make.");
-  }, [voteResults.leadingMovies, selectedMovie]);
+      deselectWinningMovie(voteConfig.memberId, voteConfig.groupId).then(() => {
+        setSelectedMovie("");
+        prevSelectedMovieRef.current = "";
+      });
+    } else if (prevSelectedMovie !== selectedMovie) {
+      prevSelectedMovieRef.current = selectedMovie;
+    }
+  }, [voteResults]);
 
   const subscribeToVotes = (memberId: string, groupId: string): void => {
     if (!voteConfig.memberId || !voteConfig.groupId) {
@@ -132,7 +138,6 @@ const useVoting = () => {
 
             setVotes(updatedVotes);
 
-            console.log("Calculating vote status...");
             calculateVoteStatus(updatedVotesAllowed, updatedVotes);
           } else setVotes(null);
         });
@@ -396,6 +401,8 @@ const useVoting = () => {
     groupId: string
   ) => {
     const docRef = doc(db, `groups/${groupId}/members/${memberId}`);
+
+    // When state is altered up here we have an infinite loop.
     try {
       const docSnap = await getDoc(docRef);
       const docData = docSnap.data();
@@ -406,7 +413,9 @@ const useVoting = () => {
             movie.movieId === movieId && movie.isSelectedMovie
         );
 
-        if (isAlreadySelected) return;
+        if (isAlreadySelected) {
+          return;
+        }
 
         const updatedMovies = docData.selectedMovies.map(
           (movie: {
@@ -419,8 +428,6 @@ const useVoting = () => {
               ? { ...movie, isSelectedMovie: true }
               : movie
         );
-
-        setSelectedMovie(movieId);
 
         await updateDoc(docRef, {
           selectedMovies: updatedMovies,
@@ -456,8 +463,6 @@ const useVoting = () => {
             return movie;
           }
         );
-
-        setSelectedMovie("");
 
         await updateDoc(docRef, {
           selectedMovies: updatedMovies,
