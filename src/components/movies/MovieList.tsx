@@ -28,6 +28,7 @@ function MovieList({
   const {
     votes,
     setVoteConfig,
+    selectedMovie,
     subscribeToVotes,
     voteForMovie,
     unvoteForMovie,
@@ -114,6 +115,12 @@ function MovieList({
 
   return (
     <>
+      {areGroupConditionsMet() &&
+      isVotingDecided(votesAllowed, groupMembers.length - 1) &&
+      selectedMovie ? (
+        <h2>{selectedMovie} has been selected!</h2>
+      ) : null}
+
       {context === "group" && userId !== user?.uid ? (
         <h2>
           You have{" "}
@@ -180,11 +187,11 @@ function MovieList({
                 {movieVotesReceived(movie.id) === 1 ? "vote" : "votes"}
               </p>
             ) : null}
-            {areGroupConditionsMet() &&
+            {/* {areGroupConditionsMet() &&
             isVotingDecided(votesAllowed, groupMembers.length - 1) &&
             votes?.selectedMovies[0].movieId === movie.id ? (
               <h2>{movie.title} has been selected!</h2>
-            ) : null}
+            ) : null} */}
           </li>
           // Think about what info I want to display in each li. Right now it's title but I'll display:
           // -Run time

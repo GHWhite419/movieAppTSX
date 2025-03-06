@@ -475,8 +475,8 @@ const useVoting = () => {
 
   return {
     votes,
-    voteConfig,
     setVoteConfig,
+    selectedMovie,
     subscribeToVotes,
     voteForMovie,
     unvoteForMovie,
