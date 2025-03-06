@@ -109,7 +109,7 @@ function MemberPage() {
   if (!member) {
     if (isMemberRemoved === true)
       return (
-        <p>Member removed from {group?.name}. Redirecting to your list...</p>
+        <p>Member removed from {group?.groupName}. Redirecting to your list...</p>
       );
     else {
       return (

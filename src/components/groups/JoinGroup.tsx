@@ -19,7 +19,7 @@ function JoinGroup() {
         try {
           const fetchedGroup = await getGroup(groupId);
           if (fetchedGroup) {
-            setGroupName(fetchedGroup.name);
+            setGroupName(fetchedGroup.groupName);
             let isMember = false;
             if (!user) {
               setJoinGroupIntent(groupId);
@@ -36,7 +36,7 @@ function JoinGroup() {
               }
               if (isMember === false) {
                 console.log("Member not found!");
-                await addUserToGroup(groupId, user.uid, "member");
+                await addUserToGroup(groupId, fetchedGroup.groupName, user.uid, "member");
                 setStatus("newMember");
                 setJoinGroupIntent(null);
               }

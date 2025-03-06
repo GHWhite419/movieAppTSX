@@ -75,7 +75,7 @@ function GroupPage() {
 
   return (
     <>
-      <h1>Hello {group?.name}! Here are your group members: </h1>
+      <h1>Hello {group?.groupName}! Here are your group members: </h1>
       <ul>
         {group?.members.map(
           (member: {

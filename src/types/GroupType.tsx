@@ -1,6 +1,6 @@
 export interface GroupType {
   id: string;
-  name: string;
+  groupName: string;
   members: MemberType[];
   //   Wonder if I should import AuthContext User and make this an array of users.
 

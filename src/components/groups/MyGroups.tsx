@@ -26,7 +26,7 @@ function MyGroups() {
       <ul>
         {groups.map((group: Omit<GroupType, "members" | "options">) => (
           <li key={group.id}>
-            <Link to={`/groups/${group.id}`}>{group.name}</Link>
+            <Link to={`/groups/${group.id}`}>{group.groupName}</Link>
           </li>
         ))}
       </ul>

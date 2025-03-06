@@ -17,6 +17,7 @@ export interface GroupContextType {
   createGroup: (name: string) => Promise<void>;
   addUserToGroup: (
     groupId: string,
+    groupName: string,
     userId: string,
     userRole: "admin" | "mod" | "member"
   ) => Promise<void>;
@@ -42,17 +43,17 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
   const { user } = useContext(AuthContext);
   const currentUserId = user ? user.uid : "";
 
-  const createGroup = async (name: string): Promise<void> => {
+  const createGroup = async (groupName: string): Promise<void> => {
     // May eventually change this to GroupType
     try {
       const docRef = await addDoc(collection(db, "groups"), {
-        name: name,
+        groupName: groupName,
         options: {
           votesAllowed: 1,
         },
         // Possibly create "defaultOptions interface?"
       });
-      addUserToGroup(docRef.id, currentUserId, "admin");
+      addUserToGroup(docRef.id, groupName, currentUserId, "admin");
     } catch (error) {
       throw new Error("Error creating group.");
       // Edit this message later.
@@ -61,6 +62,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const addUserToGroup = async (
     groupId: string,
+    groupName: string,
     userId: string,
     userRole: "admin" | "mod" | "member"
   ) => {
@@ -75,7 +77,8 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
         groupUserRole: userRole,
       });
       batch.set(userGroupRef, {
-        name: groupId,
+        name: groupName,
+        // This should not be the group Id, but the group name.
         role: userRole,
       });
 
@@ -98,7 +101,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
           const groupData = groupDoc.data();
           return {
             id: groupDoc.id,
-            name: groupData.name,
+            groupName: groupData.groupName,
           };
         });
       setGroups(groupList);
@@ -133,7 +136,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
       });
       return {
         id: docSnap.id,
-        name: groupData.name,
+        groupName: groupData.groupName,
         members,
         options: groupData.options,
       };
@@ -177,7 +180,7 @@ export const GroupProvider: React.FC<{ children: React.ReactNode }> = ({
             await setDoc(
               doc(db, `users/${memberId}/groupsJoined/`, groupId),
               {
-                name: groupInfo?.name,
+                name: groupInfo?.groupName,
                 role: "member",
               },
               { merge: true }
