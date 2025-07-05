@@ -1,4 +1,9 @@
-import { useState, useContext, useEffect, useRef } from "react";
+import {
+  useState,
+  // useContext,
+  useEffect,
+  useRef,
+} from "react";
 import { db } from "../utility/Firebase";
 import {
   doc,
@@ -11,17 +16,17 @@ import {
   Unsubscribe,
 } from "firebase/firestore";
 import { MemberType } from "../types/GroupType";
-import { AuthContext } from "../context/AuthContext";
+// import { AuthContext } from "../context/AuthContext";
 
-interface VoteParams {
-  memberId: string;
-  voterId: string;
-  movieId: string;
-  groupId: string;
-}
+// interface VoteParams {
+//   memberId: string;
+//   voterId: string;
+//   movieId: string;
+//   groupId: string;
+// }
 
 const useVoting = () => {
-  const { user } = useContext(AuthContext);
+  // const { user } = useContext(AuthContext);
 
   const [unsubscribe, setUnsubscribe] = useState<{
     groupUnsubscribe: Unsubscribe | null;
@@ -149,124 +154,213 @@ const useVoting = () => {
     });
   };
 
-  const voteForMovie = async ({
-    memberId,
-    voterId,
-    movieId,
-    groupId,
-  }: VoteParams) => {
+  // const voteForMovie = async ({
+  //   memberId,
+  //   voterId,
+  //   movieId,
+  //   groupId,
+  // }: VoteParams) => {
+  //   try {
+  //     await runTransaction(db, async (transaction) => {
+  //       const groupRef = doc(db, "groups", groupId);
+  //       const memberRef = doc(db, `groups/${groupId}/members`, memberId);
+
+  //       const groupSnap = await transaction.get(groupRef);
+  //       const memberSnap = await transaction.get(memberRef);
+
+  //       if (!groupSnap.exists()) {
+  //         throw new Error("Group not found");
+  //       }
+
+  //       const memberData = memberSnap.exists()
+  //         ? memberSnap.data()
+  //         : { selectedMovies: [], votesReceived: [] };
+
+  //       const groupData = groupSnap.data();
+  //       const votesAllowed = groupData?.options.votesAllowed ?? 1;
+
+  //       const selectedMovies = memberData.selectedMovies || [];
+  //       const votesReceived = memberData.votesReceived || [];
+
+  //       const targetMovie = selectedMovies.find(
+  //         (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
+  //       );
+
+  //       if (!targetMovie) {
+  //         selectedMovies.push({
+  //           movieId: movieId,
+  //           totalVotes: 1,
+  //           votedBy: [voterId],
+  //         });
+  //       } else if (!targetMovie.votedBy.includes(voterId)) {
+  //         targetMovie.totalVotes += 1;
+  //         targetMovie.votedBy.push(voterId);
+  //       } else {
+  //         throw new Error("User has already voted for this movie.");
+  //       }
+
+  //       const userVote = votesReceived.find(
+  //         (v: MemberType["votesReceived"][number]) => v.votingMember === voterId
+  //       );
+
+  //       if (!userVote) {
+  //         votesReceived.push({ votingMember: voterId, votesCast: 1 });
+  //       } else if (userVote.votesCast < votesAllowed) {
+  //         userVote.votesCast += 1;
+  //       } else {
+  //         throw new Error("Vote limit reached for this user.");
+  //       }
+
+  //       transaction.set(
+  //         memberRef,
+  //         { selectedMovies, votesReceived },
+  //         { merge: true }
+  //       );
+  //     });
+  //     // await new Promise((resolve) => setTimeout(resolve, 300));
+  //     // setIsVotingPaused(false);
+  //   } catch (error) {
+  //     console.log("Voting failed:", error);
+  //     throw new Error("Voting failed");
+  //     // Can modify this message later.
+  //   }
+  // };
+
+  // const unvoteForMovie = async ({
+  //   memberId,
+  //   voterId,
+  //   movieId,
+  //   groupId,
+  // }: VoteParams) => {
+  //   try {
+  //     await runTransaction(db, async (transaction) => {
+  //       const memberRef = doc(db, `groups/${groupId}/members`, memberId);
+  //       const memberSnap = await transaction.get(memberRef);
+
+  //       const memberData = memberSnap.data();
+
+  //       const selectedMovies = memberData?.selectedMovies;
+  //       const votesReceived = memberData?.votesReceived;
+
+  //       const targetMovieIndex = selectedMovies.findIndex(
+  //         (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
+  //       );
+
+  //       if (targetMovieIndex === -1) {
+  //         throw new Error("Movie not found in user's selection.");
+  //       }
+
+  //       const targetMovie = selectedMovies[targetMovieIndex];
+
+  //       targetMovie.totalVotes -= 1;
+  //       targetMovie.votedBy = targetMovie.votedBy.filter(
+  //         (targetMemberId: string) => targetMemberId !== voterId
+  //       );
+
+  //       if (targetMovie.totalVotes === 0) {
+  //         selectedMovies.splice(targetMovieIndex, 1);
+  //       }
+
+  //       const userVoteIndex = votesReceived.findIndex(
+  //         (v: MemberType["votesReceived"][number]) => v.votingMember === voterId
+  //       );
+
+  //       if (userVoteIndex === -1) {
+  //         throw new Error("User has no votes to remove");
+  //       }
+
+  //       const userVote = votesReceived[userVoteIndex];
+
+  //       userVote.votesCast -= 1;
+  //       // No need to remove userVoteIndex from votesReceived. Users will vote on other movies.
+
+  //       transaction.set(
+  //         memberRef,
+  //         { selectedMovies, votesReceived },
+  //         { merge: true }
+  //       );
+  //       // await new Promise((resolve) => setTimeout(resolve, 300));
+  //       // setIsVotingPaused(false);
+  //     });
+
+  //   } catch (error) {
+  //     console.log("Error removing vote: ", error);
+  //     throw new Error("Error removing vote.");
+  //     // Edit later
+  //   }
+  // };
+
+  const updateVotes = async (
+    memberId: string,
+    voterId: string,
+    movieIdArray: string[],
+    groupId: string
+  ) => {
     try {
       await runTransaction(db, async (transaction) => {
-        const groupRef = doc(db, "groups", groupId);
-        const memberRef = doc(db, `groups/${groupId}/members`, memberId);
-
-        const groupSnap = await transaction.get(groupRef);
-        const memberSnap = await transaction.get(memberRef);
-
-        if (!groupSnap.exists()) {
-          throw new Error("Group not found");
-        }
-
-        const memberData = memberSnap.exists()
-          ? memberSnap.data()
-          : { selectedMovies: [], votesReceived: [] };
-
-        const groupData = groupSnap.data();
-        const votesAllowed = groupData?.options.votesAllowed ?? 1;
-
-        const selectedMovies = memberData.selectedMovies || [];
-        const votesReceived = memberData.votesReceived || [];
-
-        const targetMovie = selectedMovies.find(
-          (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
-        );
-
-        if (!targetMovie) {
-          selectedMovies.push({
-            movieId: movieId,
-            totalVotes: 1,
-            votedBy: [voterId],
-          });
-        } else if (!targetMovie.votedBy.includes(voterId)) {
-          targetMovie.totalVotes += 1;
-          targetMovie.votedBy.push(voterId);
-        } else {
-          throw new Error("User has already voted for this movie.");
-        }
-
-        const userVote = votesReceived.find(
-          (v: MemberType["votesReceived"][number]) => v.votingMember === voterId
-        );
-
-        if (!userVote) {
-          votesReceived.push({ votingMember: voterId, votesCast: 1 });
-        } else if (userVote.votesCast < votesAllowed) {
-          userVote.votesCast += 1;
-        } else {
-          throw new Error("Vote limit reached for this user.");
-        }
-
-        transaction.set(
-          memberRef,
-          { selectedMovies, votesReceived },
-          { merge: true }
-        );
-      });
-    } catch (error) {
-      console.log("Voting failed:", error);
-      throw new Error("Voting failed");
-      // Can modify this message later.
-    }
-  };
-
-  const unvoteForMovie = async ({
-    memberId,
-    voterId,
-    movieId,
-    groupId,
-  }: VoteParams) => {
-    try {
-      await runTransaction(db, async (transaction) => {
         const memberRef = doc(db, `groups/${groupId}/members`, memberId);
         const memberSnap = await transaction.get(memberRef);
+
+        if (!memberSnap.exists()) {
+          throw new Error("Member not found.");
+        }
 
         const memberData = memberSnap.data();
+        const selectedMovies = memberData?.selectedMovies || [];
+        const votesReceived = memberData?.votesReceived || [];
 
-        const selectedMovies = memberData?.selectedMovies;
-        const votesReceived = memberData?.votesReceived;
-
-        const targetMovieIndex = selectedMovies.findIndex(
-          (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
-        );
-
-        if (targetMovieIndex === -1) {
-          throw new Error("Movie not found in user's selection.");
-        }
-
-        const targetMovie = selectedMovies[targetMovieIndex];
-
-        targetMovie.totalVotes -= 1;
-        targetMovie.votedBy = targetMovie.votedBy.filter(
-          (targetMemberId: string) => targetMemberId !== voterId
-        );
-
-        if (targetMovie.totalVotes === 0) {
-          selectedMovies.splice(targetMovieIndex, 1);
-        }
-
+        // Resetting votes for the user
         const userVoteIndex = votesReceived.findIndex(
           (v: MemberType["votesReceived"][number]) => v.votingMember === voterId
         );
-
-        if (userVoteIndex === -1) {
-          throw new Error("User has no votes to remove");
+        if (userVoteIndex !== -1) {
+          // votesReceived[userVoteIndex].votesCast = 0;
+          votesReceived[userVoteIndex].votesCast = movieIdArray.length; // This should equal the new total length of votedBy array.
+        } else {
+          votesReceived.push({ votingMember: voterId, votesCast: 0 });
         }
 
-        const userVote = votesReceived[userVoteIndex];
+        // Update selected movies based on movieIdArray
+        for (const movieId of movieIdArray) {
+          const targetMovie = selectedMovies.find(
+            (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
+          );
 
-        userVote.votesCast -= 1;
-        // No need to remove userVoteIndex from votesReceived. Users will vote on other movies.
+          if (targetMovie) {
+            if (!targetMovie.votedBy.includes(voterId)) {
+              // targetMovie.totalVotes += 1;
+              // This should instead equal the new total length of votedBy array.
+              targetMovie.votedBy.push(voterId);
+              targetMovie.totalVotes = targetMovie.votedBy.length; // This ensures totalVotes equals the new length of votedBy array.
+            }
+          } else {
+            selectedMovies.push({
+              movieId,
+              totalVotes: 1,
+              // This should equal the new total length of votedBy array.
+              votedBy: [voterId],
+            });
+          }
+        }
 
+        // Remove movies that are not in the movieIdArray
+        // Why does this work backwards?
+        // This is to avoid issues with changing the array length while iterating.
+        // If we iterate from the start, removing elements will shift the remaining elements left,
+        // causing us to skip checking some elements.
+        for (let i = selectedMovies.length - 1; i >= 0; i--) {
+          if (!movieIdArray.includes(selectedMovies[i].movieId)) {
+            // This should remove the user from that movie's votedBy array and thus update the number of totalVotes.
+            selectedMovies[i].votedBy = selectedMovies[i].votedBy.filter(
+              (id: string) => id !== voterId
+            );
+            selectedMovies[i].totalVotes = selectedMovies[i].votedBy.length; // Update totalVotes to match the new length of votedBy array.
+            if (selectedMovies[i].totalVotes === 0) selectedMovies.splice(i, 1);
+            // This is resetting votes for any movie that the user does not vote for.
+          }
+        }
+
+        // Update the transaction with new data
         transaction.set(
           memberRef,
           { selectedMovies, votesReceived },
@@ -274,9 +368,8 @@ const useVoting = () => {
         );
       });
     } catch (error) {
-      console.log("Error removing vote: ", error);
-      throw new Error("Error removing vote.");
-      // Edit later
+      console.error("Error updating votes:", error);
+      throw new Error("Error updating votes.");
     }
   };
 
@@ -288,9 +381,9 @@ const useVoting = () => {
     return 0;
   };
 
-  const userVotesCast: number | undefined = votes?.votesReceived?.find(
-    (targetUser) => targetUser.votingMember === user?.uid
-  )?.votesCast;
+  // const userVotesCast: number | undefined = votes?.votesReceived?.find(
+  //   (targetUser) => targetUser.votingMember === user?.uid
+  // )?.votesCast;
 
   const isTieBreakNeeded = (
     votesAllowed: number,
@@ -478,10 +571,11 @@ const useVoting = () => {
     setVoteConfig,
     selectedMovie,
     subscribeToVotes,
-    voteForMovie,
-    unvoteForMovie,
+    // voteForMovie,
+    // unvoteForMovie,
+    updateVotes,
     movieVotesReceived,
-    userVotesCast,
+    // userVotesCast,
     isTieBreakNeeded,
     isVotingDecided,
   };
