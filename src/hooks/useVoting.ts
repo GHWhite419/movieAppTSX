@@ -16,7 +16,6 @@ import {
   Unsubscribe,
 } from "firebase/firestore";
 import { MemberType } from "../types/GroupType";
-// import { AuthContext } from "../context/AuthContext";
 
 // interface VoteParams {
 //   memberId: string;
@@ -26,8 +25,6 @@ import { MemberType } from "../types/GroupType";
 // }
 
 const useVoting = () => {
-  // const { user } = useContext(AuthContext);
-
   const [unsubscribe, setUnsubscribe] = useState<{
     groupUnsubscribe: Unsubscribe | null;
     memberUnsubscribe: Unsubscribe | null;
@@ -40,6 +37,9 @@ const useVoting = () => {
     MemberType,
     "selectedMovies" | "votesReceived"
   > | null>(null);
+
+  const [userVotesCast, setUserVotesCast] = useState<string[]>([]);
+  const [voteCount, setVoteCount] = useState<number>(0);
 
   const [voteResults, setVoteResults] = useState<{
     leadingMovies: string[];
@@ -154,142 +154,6 @@ const useVoting = () => {
     });
   };
 
-  // const voteForMovie = async ({
-  //   memberId,
-  //   voterId,
-  //   movieId,
-  //   groupId,
-  // }: VoteParams) => {
-  //   try {
-  //     await runTransaction(db, async (transaction) => {
-  //       const groupRef = doc(db, "groups", groupId);
-  //       const memberRef = doc(db, `groups/${groupId}/members`, memberId);
-
-  //       const groupSnap = await transaction.get(groupRef);
-  //       const memberSnap = await transaction.get(memberRef);
-
-  //       if (!groupSnap.exists()) {
-  //         throw new Error("Group not found");
-  //       }
-
-  //       const memberData = memberSnap.exists()
-  //         ? memberSnap.data()
-  //         : { selectedMovies: [], votesReceived: [] };
-
-  //       const groupData = groupSnap.data();
-  //       const votesAllowed = groupData?.options.votesAllowed ?? 1;
-
-  //       const selectedMovies = memberData.selectedMovies || [];
-  //       const votesReceived = memberData.votesReceived || [];
-
-  //       const targetMovie = selectedMovies.find(
-  //         (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
-  //       );
-
-  //       if (!targetMovie) {
-  //         selectedMovies.push({
-  //           movieId: movieId,
-  //           totalVotes: 1,
-  //           votedBy: [voterId],
-  //         });
-  //       } else if (!targetMovie.votedBy.includes(voterId)) {
-  //         targetMovie.totalVotes += 1;
-  //         targetMovie.votedBy.push(voterId);
-  //       } else {
-  //         throw new Error("User has already voted for this movie.");
-  //       }
-
-  //       const userVote = votesReceived.find(
-  //         (v: MemberType["votesReceived"][number]) => v.votingMember === voterId
-  //       );
-
-  //       if (!userVote) {
-  //         votesReceived.push({ votingMember: voterId, votesCast: 1 });
-  //       } else if (userVote.votesCast < votesAllowed) {
-  //         userVote.votesCast += 1;
-  //       } else {
-  //         throw new Error("Vote limit reached for this user.");
-  //       }
-
-  //       transaction.set(
-  //         memberRef,
-  //         { selectedMovies, votesReceived },
-  //         { merge: true }
-  //       );
-  //     });
-  //     // await new Promise((resolve) => setTimeout(resolve, 300));
-  //     // setIsVotingPaused(false);
-  //   } catch (error) {
-  //     console.log("Voting failed:", error);
-  //     throw new Error("Voting failed");
-  //     // Can modify this message later.
-  //   }
-  // };
-
-  // const unvoteForMovie = async ({
-  //   memberId,
-  //   voterId,
-  //   movieId,
-  //   groupId,
-  // }: VoteParams) => {
-  //   try {
-  //     await runTransaction(db, async (transaction) => {
-  //       const memberRef = doc(db, `groups/${groupId}/members`, memberId);
-  //       const memberSnap = await transaction.get(memberRef);
-
-  //       const memberData = memberSnap.data();
-
-  //       const selectedMovies = memberData?.selectedMovies;
-  //       const votesReceived = memberData?.votesReceived;
-
-  //       const targetMovieIndex = selectedMovies.findIndex(
-  //         (m: MemberType["selectedMovies"][number]) => m.movieId === movieId
-  //       );
-
-  //       if (targetMovieIndex === -1) {
-  //         throw new Error("Movie not found in user's selection.");
-  //       }
-
-  //       const targetMovie = selectedMovies[targetMovieIndex];
-
-  //       targetMovie.totalVotes -= 1;
-  //       targetMovie.votedBy = targetMovie.votedBy.filter(
-  //         (targetMemberId: string) => targetMemberId !== voterId
-  //       );
-
-  //       if (targetMovie.totalVotes === 0) {
-  //         selectedMovies.splice(targetMovieIndex, 1);
-  //       }
-
-  //       const userVoteIndex = votesReceived.findIndex(
-  //         (v: MemberType["votesReceived"][number]) => v.votingMember === voterId
-  //       );
-
-  //       if (userVoteIndex === -1) {
-  //         throw new Error("User has no votes to remove");
-  //       }
-
-  //       const userVote = votesReceived[userVoteIndex];
-
-  //       userVote.votesCast -= 1;
-  //       // No need to remove userVoteIndex from votesReceived. Users will vote on other movies.
-
-  //       transaction.set(
-  //         memberRef,
-  //         { selectedMovies, votesReceived },
-  //         { merge: true }
-  //       );
-  //       // await new Promise((resolve) => setTimeout(resolve, 300));
-  //       // setIsVotingPaused(false);
-  //     });
-
-  //   } catch (error) {
-  //     console.log("Error removing vote: ", error);
-  //     throw new Error("Error removing vote.");
-  //     // Edit later
-  //   }
-  // };
-
   const updateVotes = async (
     memberId: string,
     voterId: string,
@@ -377,6 +241,7 @@ const useVoting = () => {
     const targetMovieVotes = votes?.selectedMovies.find(
       (targetMovie) => targetMovie.movieId === movieId
     )?.totalVotes;
+    console.log(`Votes for movie ${movieId}:`, targetMovieVotes);
     if (targetMovieVotes) return targetMovieVotes;
     return 0;
   };
@@ -575,9 +440,13 @@ const useVoting = () => {
     // unvoteForMovie,
     updateVotes,
     movieVotesReceived,
-    // userVotesCast,
+    userVotesCast,
+    setUserVotesCast,
+    voteCount,
+    setVoteCount,
     isTieBreakNeeded,
     isVotingDecided,
+    selectWinningMovie,
   };
 };
 
